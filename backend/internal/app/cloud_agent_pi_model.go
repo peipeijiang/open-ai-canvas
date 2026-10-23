@@ -244,7 +244,7 @@ func (s *Service) runCloudAgentModelStep(ctx context.Context, userID, runID stri
 			continue
 		}
 
-		canonical, historyErr := cloudAgentPiCanonicalForModelRequest(messages, state.Canonical)
+		canonical, historyErr := cloudAgentPiCanonicalForModelStep(messages, &state)
 		if historyErr != nil {
 			return nil, false, historyErr
 		}
@@ -463,6 +463,31 @@ func cloudAgentPiCanonicalForModelRequest(messages []map[string]any, existing ca
 		return existing, nil
 	}
 	canonical.PromptCacheKey = existing.PromptCacheKey
+	return canonical, nil
+}
+
+// cloudAgentPiCanonicalForModelStep projects Pi's complete transcript first,
+// then appends images buffered by the preceding tool batch. Appending before
+// projection is not sufficient: in a real Pi run the transcript is normally
+// longer than state.Canonical, so cloudAgentPiCanonicalForModelRequest rebuilds
+// the canonical history and discards the just-appended image message. The next
+// model task would then receive the text receipt but no referenceImages even
+// though the UI reports that the image was attached.
+func cloudAgentPiCanonicalForModelStep(messages []map[string]any, state *cloudAgentRuntime) (canonicalAgentRequest, error) {
+	if state == nil {
+		return canonicalAgentRequest{}, fmt.Errorf("cloud agent state is required")
+	}
+	canonical, err := cloudAgentPiCanonicalForModelRequest(messages, state.Canonical)
+	if err != nil {
+		return canonicalAgentRequest{}, err
+	}
+	if len(state.PendingImageInspections) == 0 {
+		return canonical, nil
+	}
+	inspections := state.PendingImageInspections
+	state.PendingImageInspections = nil
+	canonical.Messages = append(canonical.Messages,
+		map[string]any{"role": "user", "content": cloudAgentImageContentParts(inspections...)})
 	return canonical, nil
 }
 
