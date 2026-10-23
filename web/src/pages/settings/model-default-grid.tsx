@@ -3,7 +3,7 @@ import { AudioLines, Check, Film, Image, MessageSquareText } from "lucide-react"
 import { ModelIcon } from "@/components/model-picker";
 import { cn } from "@/lib/utils";
 import {
-    filterModelsByCapability,
+    selectableModelsByCapability,
     modelDisplayName,
     modelOptionName,
     resolveModelChannel,
@@ -32,7 +32,7 @@ export function ModelDefaultGrid({ config, onChange }: { config: AiConfig; onCha
     return (
         <div className="space-y-1">
             {groups.map((group) => {
-                const models = filterModelsByCapability(config.models, group.capability, config.channels);
+                const models = selectableModelsByCapability(config, group.capability);
                 const Icon = group.icon;
                 return (
                     <section key={group.capability} className="py-5 first:pt-0 last:pb-0" aria-labelledby={`default-${group.capability}-title`}>

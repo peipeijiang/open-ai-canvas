@@ -259,6 +259,8 @@ function isVideoModelName(model: string) {
         value.includes("ltx-video") ||
         value.includes("ltxvideo") ||
         value.includes("minimax-video") ||
+        value.includes("minimax-h3") ||
+        /^omni(?:$|[-_](?:flash|\d))/.test(value) ||
         value.includes("abab-video")
     );
 }
@@ -278,8 +280,7 @@ function isImageModelName(model: string) {
             value.includes("sdxl") ||
             value.includes("stable-diffusion") ||
             value.includes("midjourney") ||
-            value.includes("nano-banana") ||
-            value.includes("nanobanana") ||
+            value.includes("banana") ||
             value.includes("ideogram") ||
             value.includes("recraft") ||
             value.includes("playground") ||
@@ -289,27 +290,28 @@ function isImageModelName(model: string) {
 
 function isAudioModelName(model: string) {
     const value = modelOptionName(model).toLowerCase();
-    return value.includes("audio") || value.includes("tts") || value.includes("speech") || value.includes("voice") || value.includes("music") || value.includes("sound");
+    return value.includes("audio") || value.includes("tts") || value.includes("speech") || value.includes("voice") || value.includes("music") || value.includes("sound") || /^suno(?:$|-)/.test(value);
 }
 
-function isTextModelName(model: string) {
-    return !isImageModelName(model) && !isVideoModelName(model) && !isAudioModelName(model);
+// ID-only provider catalogs need the same fallback in channel settings and pickers.
+export function inferModelCapability(model: string): ModelCapability {
+    if (isVideoModelName(model)) return "video";
+    if (isImageModelName(model)) return "image";
+    if (isAudioModelName(model)) return "audio";
+    return "text";
 }
 
 export function modelMatchesCapability(model: string, capability?: ModelCapability) {
     if (!capability) return true;
-    if (capability === "image") return isImageModelName(model);
-    if (capability === "video") return isVideoModelName(model);
-    if (capability === "audio") return isAudioModelName(model);
-    return isTextModelName(model);
+    return inferModelCapability(model) === capability;
 }
 
 export function filterModelsByCapability(models: string[], capability?: ModelCapability, channels?: ModelChannel[]) {
     if (!capability) return models;
     return models.filter((model) => {
         const decoded = decodeChannelModel(model);
-        const channel = decoded ? channels?.find((item) => item.id === decoded.channelId) : undefined;
         const modelName = decoded?.model || modelOptionName(model);
+        const channel = decoded ? channels?.find((item) => item.id === decoded.channelId) : channels?.find((item) => item.models.includes(modelName));
         const costEntry = channel?.modelCosts?.find((item) => item.model === modelName);
         // 视频处理模型（画质增强等）只出现在画布处理工具里，不进入普通生成下拉。
         if (costEntry?.capabilityConfig?.video?.processing) return false;
