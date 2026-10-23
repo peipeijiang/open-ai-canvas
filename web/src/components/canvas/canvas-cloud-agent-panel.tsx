@@ -32,6 +32,7 @@ import {
     type AgentRun,
 } from "@/services/api/agent";
 import { agentApprovalMatchesSettings, agentApprovalTargetGenerating } from "@/lib/canvas/agent-media-approval";
+import { agentRunBudget } from "@/lib/canvas/agent-run-budget";
 import { appendAgentPromptPrefill } from "@/lib/canvas/agent-prompt-prefill";
 import type { CanvasNodeData } from "@/types/canvas";
 import type { AgentMediaSettings } from "@/services/api/agent";
@@ -142,8 +143,8 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
     const [permissionMode, setPermissionMode] = useState<AgentPermissionMode>("request_approval");
     const [contextScope, setContextScope] = useState<AgentContextKey[]>(["canvas"]);
     const [maxCredits, setMaxCredits] = useState("200");
-    const [maxGenerationTasks, setMaxGenerationTasks] = useState("0");
-    const [maxVideoSeconds, setMaxVideoSeconds] = useState("0");
+    const [maxGenerationTasks, setMaxGenerationTasks] = useState("20");
+    const [maxVideoSeconds, setMaxVideoSeconds] = useState("600");
     const [conversations, setConversations] = useState<CloudAgentConversation[]>([]);
     const [activeConversationId, setActiveConversationId] = useState(() => nanoid());
     const [historyHydrated, setHistoryHydrated] = useState(false);
@@ -711,7 +712,12 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
                     focusNodeOmittedCount: canvasId ? Math.max(0, selectedNodeIds.length - 8) : 0,
                     permissionMode,
                     contextScope: canvasId ? contextScope : [],
-                    budget: { maxCredits: positiveNumber(maxCredits), maxGenerationTasks: permissionMode === "read_only" ? 0 : Number(maxGenerationTasks), maxVideoSeconds: permissionMode === "read_only" ? 0 : Number(maxVideoSeconds) },
+                    budget: agentRunBudget({
+                        maxCredits: positiveNumber(maxCredits),
+                        maxGenerationTasks: Number(maxGenerationTasks),
+                        maxVideoSeconds: Number(maxVideoSeconds),
+                        permissionMode,
+                    }),
                 };
                 const fingerprint = JSON.stringify({ scope, parent: run?.id, input });
                 if (pending && pending.fingerprint !== fingerprint) throw new Error("上一条请求尚未确认，请恢复原消息与设置后核对，不能覆盖原幂等记录");
