@@ -188,7 +188,7 @@ export class CreativeAgentController {
     }
     private assets() { return this.state.references.map((item) => ({ id: item.id, label: item.title })); }
     private requestConfig(model?: string): AiConfig {
-        const config = this.options.config(), selected = model || this.state.textModel || config.textModel || config.model;
+        const config = this.options.config(), selected = model || config.agentTextModel || this.state.textModel || config.textModel || config.model;
         const next: AiConfig = { ...config, model: selected, count: "1", taskWorkflowProvider: "model" };
         const requestConfig = resolveModelRequestConfig(next, selected);
         if (!logicalModelIDForConfig(next) && !requestConfig.channelId) throw new Error("智能创作需要系统受管模型，请选择系统模型；自定义渠道和本机模型仍可使用原直接生成入口");

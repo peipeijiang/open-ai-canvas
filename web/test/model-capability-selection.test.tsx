@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ModelDefaultGrid } from "../src/pages/settings/model-default-grid";
-import { createModelChannel, defaultConfig, filterModelsByCapability, inferModelCapability, normalizeConfigSnapshot, selectableModelsByCapability, type ModelCapability } from "../src/stores/use-config-store";
+import { createModelChannel, defaultConfig, filterModelsByCapability, inferModelCapability, managedAgentTextConfig, normalizeConfigSnapshot, selectableModelsByCapability, type ModelCapability } from "../src/stores/use-config-store";
 
 test("ID-only provider catalogs share capability inference across settings and selectors", () => {
     const expected = {
@@ -31,7 +31,11 @@ test("saved capability overrides name fallback for encoded and raw channel model
 });
 
 test("the real model selection grid rebuilds options from current personal channels", () => {
-    const config = normalizeConfigSnapshot({ config: { ...defaultConfig, channels: [createModelChannel({ id: "personal", name: "My channel", models: ["banana-2.1", "omni-flash", "deepseek-flash"] })] } }).config;
+    const system = createModelChannel({
+        id: "agent", scope: "system", name: "Agent managed", models: ["agent-deepseek"],
+        modelCosts: [{ model: "agent-deepseek", capability: "text", billingMode: "fixed_request", unitPriceMicrocredits: 0 }],
+    });
+    const config = normalizeConfigSnapshot({ config: { ...defaultConfig, channels: [system, createModelChannel({ id: "personal", name: "My channel", models: ["banana-2.1", "omni-flash", "deepseek-flash"] })] } }).config;
     config.models = ["deleted-system::old-video"];
     const html = renderToStaticMarkup(<ModelDefaultGrid config={config} onChange={() => {}} />);
     expect(html).toContain("banana-2.1");
@@ -39,4 +43,18 @@ test("the real model selection grid rebuilds options from current personal chann
     expect(html).toContain("deepseek-flash");
     expect(html).not.toContain("old-video");
     expect(html).not.toContain("系统模型");
+});
+
+test("Agent gets an isolated managed text model while personal defaults stay personal", () => {
+    const system = createModelChannel({
+        id: "agent", scope: "system", models: ["agent-deepseek"],
+        modelCosts: [{ model: "agent-deepseek", capability: "text", billingMode: "fixed_request", unitPriceMicrocredits: 0 }],
+    });
+    const personal = createModelChannel({ id: "personal", models: ["deepseek-flash"] });
+    const config = normalizeConfigSnapshot({ config: { ...defaultConfig, channels: [system, personal], textModel: "personal::deepseek-flash" } }).config;
+    const agent = managedAgentTextConfig(config);
+    expect(config.textModel).toBe("personal::deepseek-flash");
+    expect(config.agentTextModel).toBe("agent::agent-deepseek");
+    expect(selectableModelsByCapability(agent, "text")).toEqual(["agent::agent-deepseek"]);
+    expect(agent.textModel).toBe("agent::agent-deepseek");
 });

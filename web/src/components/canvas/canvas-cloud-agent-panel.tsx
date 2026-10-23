@@ -47,7 +47,7 @@ import {
     type CloudAgentPendingSubmission,
     type CloudAgentMessagePresentation,
 } from "@/services/cloud-agent-conversations";
-import { logicalModelIDForConfig, modelOptionName, resolveModelRequestConfig, selectableModelsByCapability, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
+import { logicalModelIDForConfig, managedAgentTextConfig, modelOptionName, resolveModelRequestConfig, selectableModelsByCapability, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { selectImageInspectionModel } from "@/lib/canvas/image-to-previs-agent";
 import { useActiveTheme } from "@/stores/canvas/use-canvas-theme-store";
 import { useUserStore } from "@/stores/use-user-store";
@@ -95,6 +95,7 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
     const userId = useUserStore((state) => state.user?.id);
     const theme = canvasThemes[useActiveTheme()];
     const config = useEffectiveConfig();
+    const agentConfig = useMemo(() => managedAgentTextConfig(config), [config]);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const reducedMotion = useReducedMotion();
     const [view, setView] = useState<AgentPanelView>("chat");
@@ -190,10 +191,10 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
     const canvasAgent = canvasId ? canvasEditLeases.agent(canvasId) : null;
     const otherAgentRunning = Boolean(canvasAgent && canvasAgent.runId !== run?.id);
     const selectedModel = useMemo(() => {
-        const textModels = selectableModelsByCapability(config, "text");
-        const preferred = config.textModel || config.model || "";
+        const textModels = selectableModelsByCapability(agentConfig, "text");
+        const preferred = agentConfig.agentTextModel || agentConfig.textModel || agentConfig.model || "";
         return textModels.includes(preferred) ? preferred : textModels[0] || "";
-    }, [config]);
+    }, [agentConfig]);
     const installedSkills = useMemo(() => skills.filter((skill) => skill.isAdded), [skills]);
     const installedSkillIds = useMemo(() => new Set(installedSkills.map((skill) => skill.skillId)), [installedSkills]);
 
@@ -911,8 +912,7 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
     };
 
     const setModel = (model: string) => {
-        updateConfig("textModel", model);
-        updateConfig("model", model);
+        updateConfig("agentTextModel", model);
     };
 
     const newConversation = () => {
@@ -1036,7 +1036,7 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
                                 <motion.div key="settings" className="flex min-h-0 flex-1" initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 18 }} transition={{ duration: reducedMotion ? 0 : 0.18 }}>
                                     <CanvasCloudAgentSettings
                                         theme={theme}
-                                        config={config}
+                                        config={agentConfig}
                                         selectedModel={selectedModel}
                                         permissionMode={permissionMode}
                                         contextScope={contextScope}
@@ -1185,7 +1185,7 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
                                         footer={connectorsVisible ? <AgentConnectorsBar onClose={() => setConnectorsVisible(false)} /> : null}
                                         left={
                                             <ComposerControls
-                                                config={config}
+                                                config={agentConfig}
                                                 selectedModel={selectedModel}
                                                 permissionMode={permissionMode}
                                                 theme={theme}

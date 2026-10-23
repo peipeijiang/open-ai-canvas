@@ -29,10 +29,12 @@ const groups: Array<{
 
 export function ModelDefaultGrid({ config, onChange }: { config: AiConfig; onChange: (key: DefaultModelKey, model: string) => void }) {
     const creditsEnabled = useUserStore((state) => state.features.creditsEnabled);
+    // 这里是用户的生成默认值；Agent 受管文本模型有独立选择，不混入个人渠道页。
+    const personalConfig = { ...config, channels: config.channels.filter((channel) => channel.scope !== "system") };
     return (
         <div className="space-y-1">
             {groups.map((group) => {
-                const models = selectableModelsByCapability(config, group.capability);
+                const models = selectableModelsByCapability(personalConfig, group.capability);
                 const Icon = group.icon;
                 return (
                     <section key={group.capability} className="py-5 first:pt-0 last:pb-0" aria-labelledby={`default-${group.capability}-title`}>
@@ -47,7 +49,7 @@ export function ModelDefaultGrid({ config, onChange }: { config: AiConfig; onCha
                         {models.length ? (
                             <div role="radiogroup" aria-label={group.title} className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                                 {models.map((model) => {
-                                    const channel = resolveModelChannel(config, model);
+                                    const channel = resolveModelChannel(personalConfig, model);
                                     const selected = config[group.modelKey] === model;
                                     const cost = channel.modelCosts?.find((item) => item.model === modelOptionName(model));
                                     return (
@@ -64,10 +66,10 @@ export function ModelDefaultGrid({ config, onChange }: { config: AiConfig; onCha
                                         >
                                             <span className="flex min-w-0 items-start gap-2.5">
                                                 <span className="model-default-option-icon grid size-8 shrink-0 place-items-center rounded-md">
-                                                    <ModelIcon config={config} model={model} />
+                                                    <ModelIcon config={personalConfig} model={model} />
                                                 </span>
                                                 <span className="min-w-0 flex-1">
-                                                    <span className="block truncate text-xs font-semibold">{modelDisplayName(config, model)}</span>
+                                                    <span className="block truncate text-xs font-semibold">{modelDisplayName(personalConfig, model)}</span>
                                                     <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[var(--fs-tiny)] text-foreground/45">
                                                         <span className="max-w-full truncate">{channel.scope === "system" ? "系统模型" : channel.name || "未命名渠道"}</span>
                                                         <span className="model-default-option-scope">{channel.scope === "system" ? "系统" : "自定义"}</span>

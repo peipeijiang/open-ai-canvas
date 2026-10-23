@@ -127,6 +127,8 @@ export type AiConfig = {
     /** 仅用于单次生成任务路由，不属于全局渠道启用状态。 */
     taskWorkflowProvider?: "model" | "runninghub";
     model: string;
+    /** Canvas Agent 专用的后端受管文本模型；不携带浏览器个人渠道密钥。 */
+    agentTextModel?: string;
     imageModel: string;
     videoModel: string;
     textModel: string;
@@ -183,6 +185,7 @@ export const defaultConfig: AiConfig = {
     runningHub: { enabled: false, baseUrl: "https://www.runninghub.cn", apiKey: "", walletApiKey: "", uploadApiKey: "", useWallet: false, capability: "image", selectedKind: "workflow", workflowId: "", workflows: [] },
     taskWorkflowProvider: "model",
     model: "",
+    agentTextModel: "",
     imageModel: "",
     videoModel: "",
     textModel: "",
@@ -438,6 +441,8 @@ export function normalizeConfigSnapshot(snapshot: ConfigStoreSnapshot | undefine
     const videoModels = filterModelsByCapability(models, "video", channels);
     const textModels = filterModelsByCapability(models, "text", channels);
     const audioModels = filterModelsByCapability(models, "audio", channels);
+    const systemChannels = channels.filter((channel) => channel.scope === "system");
+    const systemTextModels = filterModelsByCapability(modelOptionsFromChannels(systemChannels), "text", systemChannels);
     const model = normalizeSelectedModel(config.model || config.imageModel || config.textModel, channels, models);
     return {
         config: {
@@ -447,6 +452,7 @@ export function normalizeConfigSnapshot(snapshot: ConfigStoreSnapshot | undefine
             channels,
             models,
             model,
+            agentTextModel: normalizeSelectedModel(config.agentTextModel || "", channels, systemTextModels),
             imageModel: normalizeSelectedModel(config.imageModel || model, channels, imageModels),
             videoModel: normalizeSelectedModel(config.videoModel, channels, videoModels),
             textModel: normalizeSelectedModel(config.textModel || model, channels, textModels),
@@ -482,6 +488,24 @@ export function normalizeConfigSnapshot(snapshot: ConfigStoreSnapshot | undefine
             audioModels,
         },
     };
+}
+
+/**
+ * Agent 请求只能携带后端公开的受管模型身份。个人渠道的 key/base URL
+ * 只存在浏览器，不能越过 Agent 的服务端安全边界。
+ */
+export function managedAgentTextConfig(config: AiConfig): AiConfig {
+    const channels = config.channels.filter((channel) => channel.scope === "system");
+    const managed = normalizeConfigSnapshot({
+        config: {
+            ...config,
+            channels,
+            model: config.agentTextModel || "",
+            textModel: config.agentTextModel || "",
+        },
+    }).config;
+    const model = managed.agentTextModel || managed.textModel || "";
+    return { ...managed, model, textModel: model, agentTextModel: model };
 }
 
 function normalizeSelectedModel(value: string, channels: ModelChannel[], options: string[]) {
