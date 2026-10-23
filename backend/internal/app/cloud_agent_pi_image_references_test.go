@@ -42,3 +42,41 @@ func TestCloudAgentPiStepImageReferencesSatisfyPlaceholderPreflight(t *testing.T
 		t.Fatalf("text-only history: refs=%#v err=%v", refs, err)
 	}
 }
+
+func TestCloudAgentPiModelStepAppendsBufferedImagesAfterProjection(t *testing.T) {
+	state := cloudAgentRuntime{}
+	// Production Pi sessions usually have a longer runtime transcript than the
+	// persisted canonical history. That exact shape used to project away the
+	// buffered image even though the equal-length unit fixture passed.
+	state.Canonical.Messages = []map[string]any{{"role": "user", "content": "请核对参考图"}}
+	cloudAgentStageImageInspection(&state, cloudAgentImageInspection{
+		Receipt:  map[string]any{"nodeId": "cat", "title": "参考图"},
+		ImageURL: "resource:ref-one",
+	})
+
+	canonical, err := cloudAgentPiCanonicalForModelStep(
+		[]map[string]any{
+			{"role": "user", "content": "请核对参考图"},
+			{"role": "assistant", "content": "我先查看画面"},
+			{"role": "user", "content": "工具回执已写入"},
+		},
+		&state,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state.PendingImageInspections) != 0 {
+		t.Fatalf("buffered image was not flushed: %#v", state.PendingImageInspections)
+	}
+	if len(canonical.Messages) != 4 || cloudAgentMessageImagePartCount(canonical.Messages[3]) != 1 {
+		t.Fatalf("projected request lost the buffered image: %#v", canonical.Messages)
+	}
+	parts, ok := canonical.Messages[3]["content"].([]any)
+	if !ok || len(parts) != 2 {
+		t.Fatalf("flushed image content is malformed: %#v", canonical.Messages[3])
+	}
+	image, _ := parts[1].(map[string]any)["image_url"].(map[string]any)
+	if stringField(image, "url") != "resource:ref-one" {
+		t.Fatalf("flushed image placeholder = %#v", image)
+	}
+}
