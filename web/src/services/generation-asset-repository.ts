@@ -1,10 +1,8 @@
+import { requestCrossTabStorageLock } from "@/services/cross-tab-storage-lock";
+
 export type GenerationAssetRecord = {
     id: string;
     metadata?: Record<string, unknown>;
-};
-
-type AsyncStorageLock = {
-    request<T>(name: string, callback: () => Promise<T>): Promise<T>;
 };
 
 type GenerationStorageLockOptions = {
@@ -47,12 +45,7 @@ function preserveHydratedPreview<TAsset extends GenerationAssetRecord>(persisted
 }
 
 function runWithBrowserStorageLock<T>(scope: string, operation: () => Promise<T>, options: GenerationStorageLockOptions) {
-    const locks = typeof window !== "undefined" && typeof navigator !== "undefined" ? (navigator.locks as AsyncStorageLock | undefined) : undefined;
-    if (locks) return locks.request(`${ASSET_STORAGE_LOCK_PREFIX}${scope}`, operation);
-    if (options.requireCrossRealmLock && typeof window !== "undefined" && typeof document !== "undefined") {
-        throw new Error("当前浏览器不支持跨标签存储锁，已停止生成素材持久化");
-    }
-    return operation();
+    return requestCrossTabStorageLock(`${ASSET_STORAGE_LOCK_PREFIX}${scope}`, operation, Boolean(options.requireCrossRealmLock));
 }
 
 /**
@@ -79,14 +72,7 @@ export function withGenerationArtifactCommitLock<T>(scope: string, operation: ()
     const previous = artifactCommitTails.get(scope) ?? Promise.resolve();
     const pending = previous
         .then(() => undefined, () => undefined)
-        .then(() => {
-            const locks = typeof window !== "undefined" && typeof navigator !== "undefined" ? (navigator.locks as AsyncStorageLock | undefined) : undefined;
-            if (locks) return locks.request(`${ARTIFACT_COMMIT_LOCK_PREFIX}${scope}`, operation);
-            if (options.requireCrossRealmLock && typeof window !== "undefined" && typeof document !== "undefined") {
-                throw new Error("当前浏览器不支持跨标签存储锁，已停止生成文件提交");
-            }
-            return operation();
-        });
+        .then(() => requestCrossTabStorageLock(`${ARTIFACT_COMMIT_LOCK_PREFIX}${scope}`, operation, Boolean(options.requireCrossRealmLock)));
     const tail = pending.then(
         () => undefined,
         () => undefined,
