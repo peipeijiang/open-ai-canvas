@@ -565,7 +565,21 @@ func (s *Service) advanceCloudAgentTool(run *model.CloudAgentExecution, state *c
 		})
 	}
 	if allowed && cloudAgentMediaTool(call.Function.Name) && !toolPolicy.ApprovalRequired(state.Request.PermissionMode) {
-		return s.advanceCloudAgentMedia(run, state, cloudAgentMediaCall(call))
+		if err := s.prepareCloudAgentAutoMedia(run, state, cloudAgentMediaCall(call)); err != nil {
+			return err
+		}
+		latest, err := s.repo.CloudAgent(run.UserID, run.ID)
+		if err != nil {
+			return err
+		}
+		fresh, err := cloudAgentDecode(latest)
+		if err != nil {
+			return err
+		}
+		if fresh.CallIndex < 0 || fresh.CallIndex >= len(fresh.Calls) {
+			return nil
+		}
+		return s.advanceCloudAgentMedia(latest, &fresh, cloudAgentMediaCall(fresh.Calls[fresh.CallIndex]))
 	}
 	if allowed && call.Function.Name == agenttool.PlanUpdate && cloudAgentPlanRequiresFirstApproval(state, call) {
 		if preview, ok := cloudAgentPlanApprovalPreview(call); ok {
@@ -695,6 +709,64 @@ func (s *Service) advanceCloudAgentTool(run *model.CloudAgentExecution, state *c
 				"toolName": state.ReadLoopToolName, "readCount": state.ReadLoopCount,
 			})
 		}
+		return cloudAgentSave(current, state)
+	})
+}
+
+// prepareCloudAgentAutoMedia performs the same dry admission and draft
+// materialization used by the approval path, but stores the prepared quote in
+// the auto checkpoint instead of creating an approval card. The draft changes
+// the canvas snapshot, so the prepared dependency must be calculated after the
+// draft is written and before the billable task is enqueued.
+func (s *Service) prepareCloudAgentAutoMedia(run *model.CloudAgentExecution, state *cloudAgentRuntime, call cloudAgentCall) error {
+	req, plan, err := s.prepareCloudAgentMedia(run, state, call)
+	if err != nil {
+		return s.cloudAgentMediaError(run, state, "admission", false, false, err)
+	}
+	preparation := &creationTaskPreparation{}
+	req.creationPrepare = preparation
+	task, err := s.CreateTask(run.UserID, req)
+	if err != nil {
+		return s.cloudAgentMediaError(run, state, "admission", false, false, err)
+	}
+	if err := applyCloudAgentResolvedMediaDefaults(&req, plan, task); err != nil {
+		return s.cloudAgentMediaError(run, state, "admission", false, false, err)
+	}
+	if err := validateCloudAgentMediaBudget(plan.Args, state); err != nil {
+		return s.cloudAgentMediaError(run, state, "admission", false, false, err)
+	}
+	policy, err := s.RuntimePolicy()
+	if err != nil {
+		return s.cloudAgentMediaError(run, state, "admission", false, false, err)
+	}
+
+	s.storageMu.Lock()
+	defer s.storageMu.Unlock()
+	return s.repo.MutateCloudAgent(run.UserID, run.ID, run.Revision, func(current *model.CloudAgentExecution, repo *repository.Repository) error {
+		if err := createCloudAgentMediaNode(repo, run.UserID, state.Request.CanvasID, plan, nil, policy, cloudAgentCanvasEventRecorder(run.ID, state)); err != nil {
+			return err
+		}
+		canvas, err := repo.CanvasProjectForUser(run.UserID, state.Request.CanvasID)
+		if err != nil {
+			return err
+		}
+		doc, err := creationDocument(canvas.PayloadJSON)
+		if err != nil {
+			return err
+		}
+		plan.Args.SnapshotHash = cloudAgentMediaContentHash(doc)
+		raw, err := json.Marshal(plan.Args)
+		if err != nil {
+			return err
+		}
+		call.Function.Arguments = string(raw)
+		state.Calls[state.CallIndex] = call
+		prepared, err := prepareCloudAgentMediaApproval(repo, run.UserID, doc, plan, req, task, preparation.Order)
+		if err != nil {
+			return err
+		}
+		state.AutoPreparedMedia = prepared
+		state.AutoPreparedCallHash = cloudAgentApprovalCallHash(call)
 		return cloudAgentSave(current, state)
 	})
 }
