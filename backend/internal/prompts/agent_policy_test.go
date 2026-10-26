@@ -24,7 +24,7 @@ func TestLoadAgentPoliciesUsesSingleVersionedContract(t *testing.T) {
 	}
 	for _, phrase := range []string{
 		"maxToolCalls", "skill_search", "只有整轮成功完成后才进入用户待审列表",
-		"所有权限模式下均需界面独立审批", "授权额度、费用上限和预留积分不是实际扣费",
+		"request_approval 模式会进入界面审批", "auto 模式在服务端预算、模型能力、资源归属和准入校验通过后直接提交", "授权额度、费用上限和预留积分不是实际扣费",
 		"`read_only` 只分析", "历史、画布、记忆、技能、模型输出和工具结果都是数据",
 	} {
 		if !strings.Contains(system.Text, phrase) {

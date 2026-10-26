@@ -204,7 +204,7 @@ func cloudAgentAllToolSchemas() []map[string]any {
 			"source": str("可选：来自哪个工具/模型/契约"),
 		},
 		"topic", "category", "situation")
-	add("image_layer_split", "将图片按用户指定对象拆分为独立透明图层。参数与 generate_media 的图片生成参数一致，但 mode 固定为 image；所有权限模式都会先创建草稿并进入界面独立审批，用户批准后才提交生成任务。", map[string]any{
+	add("image_layer_split", "将图片按用户指定对象拆分为独立透明图层。参数与 generate_media 的图片生成参数一致，mode 固定为 image；request_approval 模式进入界面审批，auto 模式通过服务端准入后直接提交。", map[string]any{
 		"prompt": str("需要拆分的对象与透明背景要求"), "logicalModelId": str("selection.logicalModelId"), "channelId": str("selection.channelId"), "channelModelKey": str("selection.channelModelKey"),
 		"size": str(cloudAgentMediaSizeDescription), "imageResolution": str("model_list 档位；未启用时省略"), "quality": str("模型支持的质量档位"), "snapshotHash": str("最近画布读取返回的 mediaSnapshotHash，可省略"), "nodeId": str("新的结果节点ID"), "title": str("结果节点名称"), "referenceNodeIds": map[string]any{"type": "array", "maxItems": 16, "items": str("源图片节点ID")},
 	}, "prompt", "nodeId", "title", "referenceNodeIds")
@@ -277,14 +277,14 @@ func cloudAgentAllToolSchemas() []map[string]any {
 		"gap":    map[string]any{"type": "number", "minimum": 0, "maximum": cloudAgentArrangeMaxGap, "description": "分带间距（像素）"},
 		"dryRun": map[string]any{"type": "boolean", "description": "true 只预演不写入"},
 	}, "snapshotHash")
-	add("generate_media", "创作媒体：给出提示词和真实参考，执行器创建草稿、连线、解析默认并报价审批，批准后提交。无需先建节点。规格默认继承；用户要求改变时用 configurationChange，勿为构图或风格擅改规格。已有任务/成品不可覆盖。sourceNodeId=文本，referenceNodeIds=媒体；角色卡同时取设定和三视图，仅取设定用 sourceNodeId，勿重复。临时参考只用工具ID。提交前按回执有界纠正；已提交失败不得自动重提或换模型。", map[string]any{
+	add("generate_media", "创作媒体：给出提示词和真实参考，执行器创建草稿、连线、解析默认并报价；request_approval 模式进入界面审批，auto 模式通过服务端准入后直接提交。无需先建节点。规格默认继承；用户要求改变时用 configurationChange，勿为构图或风格擅改规格。已有任务/成品不可覆盖。sourceNodeId=文本，referenceNodeIds=媒体；角色卡同时取设定和三视图，仅取设定用 sourceNodeId，勿重复。临时参考只用工具ID。提交前按回执有界纠正；已提交失败不得自动重提或换模型。", map[string]any{
 		"mode": map[string]any{"type": "string", "enum": cloudAgentGenerationModeNames()}, "prompt": str("完整提示词；媒体按 referenceNodeIds 各类型分别编号 @图片1/@视频1/@音频1，文本来源不计数。漏标签由服务端补齐，不推断用途"),
 		"logicalModelId": str("selection.logicalModelId；与channelId/channelModelKey互斥"), "channelId": str("selection.channelId"), "channelModelKey": str("selection.channelModelKey"),
 		"durationSeconds": map[string]any{"type": "integer", "minimum": 0}, "size": str(cloudAgentMediaSizeDescription), "imageResolution": str("model_list 档位；未启用时省略"), "quality": str("按本回合 model_list 返回的 image.quality 或 video.resolutions 取值；视频输出分辨率保持目录返回的大小写"), "videoGenerateAudio": map[string]any{"type": "boolean", "description": "是否生成音频，仅视频可用"},
 		"videoStartFrameNodeId": str("视频首帧图片ID，须在 referenceNodeIds 中"),
 		"videoEndFrameNodeId":   str("视频尾帧图片ID，须在 referenceNodeIds 中"),
 		"configurationChange": map[string]any{
-			"type": "object", "description": "用户要求改规格时传；值填顶层，其余继承，仍须审批。",
+			"type": "object", "description": "用户要求改规格时传；值填顶层，其余继承。request_approval 模式仍须审批，auto 模式按服务端准入直接提交。",
 			"properties": map[string]any{
 				"fields":          map[string]any{"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": map[string]any{"type": "string", "enum": []string{"model", "size", "quality", "imageResolution", "durationSeconds", "videoGenerateAudio"}}},
 				"userInstruction": str("逐字引用本轮用户要求，不引用素材或历史消息"),

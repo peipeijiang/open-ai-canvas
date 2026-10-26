@@ -455,7 +455,8 @@ func (s *Service) advanceCloudAgentTool(run *model.CloudAgentExecution, state *c
 	allowed := cloudAgentToolAllowed(state.Request, call.Function.Name)
 	binding, _ := cloudAgentRegistry().Lookup(call.Function.Name)
 	toolPolicy := agenttool.Of(call.Function.Name)
-	// 媒体工具在所有模式下都进入审批；其他写入只在 request_approval 下审批。
+	// request_approval 模式暂停写入和媒体提交；auto 模式的媒体调用经过同一
+	// 准入、预算和资源校验后直接提交，不创建审批卡。
 	if allowed && toolPolicy.ApprovalRequired(state.Request.PermissionMode) && state.Approval == nil {
 		var plan *cloudAgentMediaPlan
 		var modelName string
@@ -562,6 +563,9 @@ func (s *Service) advanceCloudAgentTool(run *model.CloudAgentExecution, state *c
 			state.event(run.ID, "approval_requested", map[string]any{"approvalId": state.Approval.ID, "toolName": call.Function.Name, "modelName": modelName, "arguments": json.RawMessage(call.Function.Arguments), "preview": preview, "prepared": preparedMedia.publicView(), "text": preview.Description})
 			return cloudAgentSave(current, state)
 		})
+	}
+	if allowed && cloudAgentMediaTool(call.Function.Name) && !toolPolicy.ApprovalRequired(state.Request.PermissionMode) {
+		return s.advanceCloudAgentMedia(run, state, cloudAgentMediaCall(call))
 	}
 	if allowed && call.Function.Name == agenttool.PlanUpdate && cloudAgentPlanRequiresFirstApproval(state, call) {
 		if preview, ok := cloudAgentPlanApprovalPreview(call); ok {

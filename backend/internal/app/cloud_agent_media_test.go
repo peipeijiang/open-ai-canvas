@@ -800,9 +800,8 @@ func TestCloudAgentMediaPreviousDraftRequiresNewApproval(t *testing.T) {
 	}
 }
 
-// 界面承诺“图片、视频始终先创建草稿，再经独立审批才提交”：auto 也必须先审批，
-// 审批前不建任务、不扣费；批准后恰好提交一次。
-func TestCloudAgentAutoMediaRequiresApprovalBeforeSubmit(t *testing.T) {
+// auto 模式不创建审批卡；仍必须先完成模型、预算、资源和参数准入，然后恰好提交一次。
+func TestCloudAgentAutoMediaSubmitsAfterAdmission(t *testing.T) {
 	s, db, a := agentMediaFixture(t)
 	// Omitted size and duration should be filled by the selected model's catalog
 	// defaults during admission instead of producing a repair turn.
@@ -821,20 +820,14 @@ func TestCloudAgentAutoMediaRequiresApprovalBeforeSubmit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if run.Status != "waiting_approval" || state.Approval == nil {
-		t.Fatalf("auto mode submitted media without approval: status=%s", run.Status)
+	if state.Approval != nil || state.MediaTaskID == "" {
+		t.Fatalf("auto mode did not submit media directly: status=%s task=%s approval=%+v", run.Status, state.MediaTaskID, state.Approval)
 	}
 	var pendingTasks, pendingOrders int64
 	db.Model(&model.Task{}).Where("type = ?", "canvas_video").Count(&pendingTasks)
 	db.Model(&model.BillingOrder{}).Count(&pendingOrders)
-	if pendingTasks != 0 || pendingOrders != ordersBefore {
-		t.Fatalf("charged/submitted before approval: tasks=%d orders=%d before=%d", pendingTasks, pendingOrders, ordersBefore)
-	}
-	if err := s.DecideCloudAgentApproval("user", run.ID, state.Approval.ID, "approve", ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.advanceCloudAgentByID("user", run.ID); err != nil {
-		t.Fatal(err)
+	if pendingTasks != 1 || pendingOrders != ordersBefore+1 {
+		t.Fatalf("auto admission did not submit exactly once: tasks=%d orders=%d before=%d", pendingTasks, pendingOrders, ordersBefore)
 	}
 	run, _ = s.repo.CloudAgent("user", run.ID)
 	state, err = cloudAgentDecode(run)
