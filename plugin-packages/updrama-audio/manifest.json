@@ -1,0 +1,590 @@
+{
+  "apiVersion": "yingce.plugin/v2",
+  "id": "updrama-audio",
+  "name": "Updrama 音乐与配音",
+  "version": "1.0.0",
+  "author": "Local deployment",
+  "description": "按 updrama 文档适配 Suno v6 音乐与 GEM-2.5-TTS 配音的统一异步媒体 API。",
+  "documentation": "协议来源：https://up.lk888.ai/apidoc。创建 POST /v1/media/generate；查询 GET /v1/media/status?task_id=。使用 state 判断状态。Suno 的 prompt 是风格，params.lyrics 是歌词；GEM 2.5 必填 model_version，默认 pro；voice_id 默认 Zephyr，支持角色绑定的预置音色，非声音克隆。仅声明式映射，凭据与下载由宿主处理。",
+  "permissions": [
+    "generation.run",
+    "media.read"
+  ],
+  "configuration": {
+    "fields": [
+      {
+        "name": "apiKey",
+        "type": "secret",
+        "label": "API Key",
+        "required": true
+      }
+    ]
+  },
+  "contributes": {
+    "providers": [
+      {
+        "id": "updrama-suno-v6",
+        "label": "Suno v6 音乐 / 歌曲",
+        "capabilities": [
+          "audio"
+        ],
+        "scopes": [
+          "admin.system-channel",
+          "user.custom-channel",
+          "canvas",
+          "creation",
+          "agent"
+        ],
+        "baseUrl": "https://api.lk888.ai",
+        "requiresPublicMediaUrls": false,
+        "auth": {
+          "type": "bearer",
+          "field": "apiKey"
+        },
+        "parameters": [
+          {
+            "name": "model",
+            "type": "string",
+            "required": true,
+            "mapping": "model",
+            "description": "上游模型 ID"
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "required": true,
+            "mapping": "prompt",
+            "description": "音乐风格描述，歌词通过 providerOptions.updrama-suno-v6.lyrics 传入。"
+          },
+          {
+            "name": "providerOptions",
+            "type": "object",
+            "description": "仅使用本协议命名空间中的上游参数"
+          }
+        ],
+        "validations": [
+          {
+            "assert": {
+              "$eq": [
+                {
+                  "$ref": "request.model"
+                },
+                "suno-v6"
+              ]
+            },
+            "message": "此协议只接受 suno-v6。"
+          },
+          {
+            "assert": {
+              "$lte": [
+                {
+                  "$len": {
+                    "$ref": "request.prompt"
+                  }
+                },
+                1000
+              ]
+            },
+            "message": "Suno 风格描述最多 1000 字符；歌词请放入 lyrics。"
+          },
+          {
+            "assert": {
+              "$lte": [
+                {
+                  "$len": {
+                    "$coalesce": [
+                      {
+                        "$ref": "request.providerOptions.updrama-suno-v6.lyrics"
+                      },
+                      ""
+                    ]
+                  }
+                },
+                5000
+              ]
+            },
+            "message": "Suno 歌词最多 5000 字符。"
+          }
+        ],
+        "create": {
+          "method": "POST",
+          "path": "/v1/media/generate",
+          "originPath": true,
+          "contentType": "application/json",
+          "body": {
+            "model": {
+              "$ref": "request.model"
+            },
+            "prompt": {
+              "$ref": "request.prompt"
+            },
+            "params": {
+              "mv": {
+                "$coalesce": [
+                  {
+                    "$ref": "request.providerOptions.updrama-suno-v6.mv"
+                  },
+                  "v6"
+                ]
+              },
+              "lyrics": {
+                "$omitEmpty": {
+                  "$ref": "request.providerOptions.updrama-suno-v6.lyrics"
+                }
+              },
+              "make_instrumental": {
+                "$coalesce": [
+                  {
+                    "$ref": "request.providerOptions.updrama-suno-v6.make_instrumental"
+                  },
+                  "song"
+                ]
+              },
+              "vocal_gender": {
+                "$coalesce": [
+                  {
+                    "$ref": "request.providerOptions.updrama-suno-v6.vocal_gender"
+                  },
+                  "auto"
+                ]
+              }
+            }
+          }
+        },
+        "poll": {
+          "method": "GET",
+          "path": "/v1/media/status",
+          "originPath": true,
+          "query": {
+            "task_id": {
+              "$ref": "taskId"
+            }
+          }
+        },
+        "response": {
+          "taskId": {
+            "$coalesce": [
+              {
+                "$ref": "response.task_id"
+              },
+              {
+                "$ref": "response.data.task_id"
+              },
+              {
+                "$ref": "taskId"
+              }
+            ]
+          },
+          "status": {
+              "$switch": {
+                "cases": [
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "success"
+                      ]
+                    },
+                    "then": "succeeded"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "failed"
+                      ]
+                    },
+                    "then": "failed"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "running"
+                      ]
+                    },
+                    "then": "processing"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "pending"
+                      ]
+                    },
+                    "then": "pending"
+                  }
+                ],
+                "default": "pending"
+              }
+          },
+          "message": {
+            "$coalesce": [
+              {
+                "$ref": "response.error.message"
+              },
+              {
+                "$ref": "response.error"
+              },
+              {
+                "$ref": "response.message"
+              }
+            ]
+          },
+          "audios": {
+            "$coalesce": [
+              {
+                "$ref": "response.result_url"
+              },
+              {
+                "$ref": "response.data.result_url"
+              },
+              {
+                "$ref": "response.audio_url"
+              },
+              {
+                "$ref": "response.data.audio_url"
+              }
+            ]
+          },
+          "resultKind": "audio",
+          "resultEphemeral": true,
+          "errorPaths": [
+            "error.code"
+          ]
+        }
+      },
+      {
+        "id": "updrama-gem-tts",
+        "label": "GEM-2.5-TTS 配音",
+        "capabilities": [
+          "audio"
+        ],
+        "scopes": [
+          "admin.system-channel",
+          "user.custom-channel",
+          "canvas",
+          "creation",
+          "agent"
+        ],
+        "baseUrl": "https://api.lk888.ai",
+        "requiresPublicMediaUrls": false,
+        "auth": {
+          "type": "bearer",
+          "field": "apiKey"
+        },
+        "parameters": [
+          {
+            "name": "model",
+            "type": "string",
+            "required": true,
+            "mapping": "model",
+            "description": "上游模型 ID"
+          },
+          {
+            "name": "prompt",
+            "type": "string",
+            "required": true,
+            "mapping": "prompt",
+            "description": "配音文本，可通过自然语言指定语气与情绪。"
+          },
+          {
+            "name": "providerOptions",
+            "type": "object",
+            "description": "仅使用本协议命名空间中的上游参数"
+          }
+        ],
+        "validations": [
+          {
+            "assert": {
+              "$in": [
+                {
+                  "$ref": "request.model"
+                },
+                [
+                  "gem-2.5-tts",
+                  "gem-3.1-tts"
+                ]
+              ]
+            },
+            "message": "此协议仅支持 gem-2.5-tts 与 gem-3.1-tts。"
+          },
+          {
+            "assert": {
+              "$in": [
+                {
+                  "$coalesce": [
+                    {
+                      "$ref": "request.providerOptions.updrama-gem-tts.model_version"
+                    },
+                    "pro"
+                  ]
+                },
+                [
+                  "pro",
+                  "flash"
+                ]
+              ]
+            },
+            "message": "GEM-TTS model_version 必须为 pro 或 flash。"
+          }
+        ],
+        "create": {
+          "method": "POST",
+          "path": "/v1/media/generate",
+          "originPath": true,
+          "contentType": "application/json",
+          "body": {
+            "model": {
+              "$ref": "request.model"
+            },
+            "prompt": {
+              "$if": {
+                "condition": {
+                  "$ref": "request.extra.audioInstructions"
+                },
+                "then": {
+                  "$concat": [
+                    {
+                      "$ref": "request.extra.audioInstructions"
+                    },
+                    "\n",
+                    {
+                      "$ref": "request.prompt"
+                    }
+                  ]
+                },
+                "else": {
+                  "$ref": "request.prompt"
+                }
+              }
+            },
+            "params": {
+              "model_version": {
+                "$coalesce": [
+                  {
+                    "$ref": "request.providerOptions.updrama-gem-tts.model_version"
+                  },
+                  "pro"
+                ]
+              },
+              "voice_id": {
+                "$coalesce": [
+                  {
+                    "$ref": "request.providerOptions.updrama-gem-tts.voice_id"
+                  },
+                  {
+                    "$if": {
+                      "condition": {
+                        "$in": [
+                          {
+                            "$coalesce": [
+                              {
+                                "$ref": "request.extra.audioVoice"
+                              },
+                              ""
+                            ]
+                          },
+                          [
+                            "",
+                            "alloy"
+                          ]
+                        ]
+                      },
+                      "then": "Zephyr",
+                      "else": {
+                        "$ref": "request.extra.audioVoice"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "poll": {
+          "method": "GET",
+          "path": "/v1/media/status",
+          "originPath": true,
+          "query": {
+            "task_id": {
+              "$ref": "taskId"
+            }
+          }
+        },
+        "response": {
+          "taskId": {
+            "$coalesce": [
+              {
+                "$ref": "response.task_id"
+              },
+              {
+                "$ref": "response.data.task_id"
+              },
+              {
+                "$ref": "taskId"
+              }
+            ]
+          },
+          "status": {
+              "$switch": {
+                "cases": [
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "success"
+                      ]
+                    },
+                    "then": "succeeded"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "failed"
+                      ]
+                    },
+                    "then": "failed"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "running"
+                      ]
+                    },
+                    "then": "processing"
+                  },
+                  {
+                    "when": {
+                      "$eq": [
+                        {
+                          "$coalesce": [
+                            {
+                              "$ref": "response.state"
+                            },
+                            {
+                              "$ref": "response.data.state"
+                            },
+                            "pending"
+                          ]
+                        },
+                        "pending"
+                      ]
+                    },
+                    "then": "pending"
+                  }
+                ],
+                "default": "pending"
+              }
+          },
+          "message": {
+            "$coalesce": [
+              {
+                "$ref": "response.error.message"
+              },
+              {
+                "$ref": "response.error"
+              },
+              {
+                "$ref": "response.message"
+              }
+            ]
+          },
+          "audios": {
+            "$coalesce": [
+              {
+                "$ref": "response.result_url"
+              },
+              {
+                "$ref": "response.data.result_url"
+              },
+              {
+                "$ref": "response.audio_url"
+              },
+              {
+                "$ref": "response.data.audio_url"
+              }
+            ]
+          },
+          "resultKind": "audio",
+          "resultEphemeral": true,
+          "errorPaths": [
+            "error.code"
+          ]
+        }
+      }
+    ]
+  }
+}
