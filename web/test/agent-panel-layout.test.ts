@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { changeAgentPanelLayout, clampAgentPanelLayout, defaultAgentPanelLayout, restoreAgentPanelLayout } from "@/lib/canvas/agent-panel-layout";
-import { agentErrorPresentation, agentSubmissionErrorTitle } from "@/lib/canvas/agent-error-presentation";
+import { agentApprovalErrorTitle, agentErrorPresentation, agentSubmissionErrorTitle } from "@/lib/canvas/agent-error-presentation";
 import { ApiError } from "@/services/api/request";
 
 const viewport = { width: 1280, height: 800 };
@@ -79,6 +79,12 @@ describe("Agent submission sync preflight contract", () => {
 });
 
 describe("Agent error semantics", () => {
+    it("directs expired contracts to a new message while keeping ambiguous approvals retryable", () => {
+        expect(agentApprovalErrorTitle(new ApiError("规则已更新", { status: 409, reason: "agent_runtime_contract_changed" }))).toBe("旧审批已失效，请在当前对话发送新消息");
+        for (const cause of [new TypeError("network failed"), new ApiError("快照已变化", { status: 409, reason: "conflict" }), new Error("旧版执行合同")]) {
+            expect(agentApprovalErrorTitle(cause)).toBe("审批未确认，请重试");
+        }
+    });
     it("uses HTTP status rather than matching error wording", () => {
         expect(agentErrorPresentation(new ApiError("Not found", { status: 404 })).title).toBe("Agent 接口或资源不存在");
         expect(agentErrorPresentation(new Error("HTTP 404"))).toEqual({ title: "Agent 执行失败", text: "HTTP 404" });

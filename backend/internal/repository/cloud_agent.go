@@ -183,7 +183,7 @@ func (r *Repository) ActiveCloudAgentsAfter(after string, limit int) ([]model.Cl
 		limit = 50
 	}
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("(status IN ? OR cleanup_pending = ?) AND id > ?", []string{"running", "queued"}, true, after).Order("id").Limit(limit).Find(&runs).Error; err != nil {
+		if err := tx.Where("(status IN ? OR cleanup_pending = ?) AND id > ?", []string{"running", "queued", "waiting_approval"}, true, after).Order("id").Limit(limit).Find(&runs).Error; err != nil {
 			return err
 		}
 		scoped := New(tx)
@@ -404,7 +404,7 @@ func (r *Repository) MarkCloudAgentFailed(userID, id string, revision int64, mes
 		detail = message[0]
 	}
 	result := r.db.Model(&model.CloudAgentExecution{}).
-		Where("id = ? AND user_id = ? AND revision = ? AND status IN ?", id, userID, revision, []string{"queued", "running"}).
+		Where("id = ? AND user_id = ? AND revision = ? AND status IN ?", id, userID, revision, []string{"queued", "running", "waiting_approval"}).
 		Updates(map[string]any{"status": "failed", "cleanup_pending": true, "failure_message": detail, "revision": gorm.Expr("revision + 1")})
 	if result.Error != nil {
 		return result.Error

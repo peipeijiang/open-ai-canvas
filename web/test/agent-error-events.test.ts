@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import type { CloudAgentChatMessage } from "@/components/canvas/canvas-cloud-agent-chat-ui";
 import { applyAgentEvent } from "@/components/canvas/canvas-cloud-agent-events";
 import { buildAgentFeedSegments } from "@/lib/canvas/agent-operation-feed";
-import type { AgentEvent } from "@/services/api/agent";
+import type { AgentEvent, AgentRun } from "@/services/api/agent";
+import type { ApprovalState } from "@/components/canvas/canvas-cloud-agent-events";
 
 const failureMessage = "Agent 执行中断，请重新发送消息；如反复出现，请把诊断号 ag-test-run 反馈给管理员";
 const event = (type: string, payload: AgentEvent["payload"] = {}, runId = "ag-test-run"): AgentEvent => ({
@@ -15,6 +16,24 @@ const event = (type: string, payload: AgentEvent["payload"] = {}, runId = "ag-te
 });
 const failed = event("run_failed", { error: "internal runner error" });
 const status = event("run_status", { status: "failed", failureMessage });
+
+test("terminal snapshots dismiss stale approval and unlock the same conversation", () => {
+    const approval = { approvalId: "old", call: { id: "call", function: { name: "generate_media", arguments: "{}" } } };
+    let run: AgentRun | null = { id: "ag-test-run", canvasId: "canvas", status: "waiting_approval", permissionMode: "auto", createdAt: "", updatedAt: "", approval };
+    let pending: ApprovalState | null = { approvalId: "old", detail: approval, reason: "" };
+    let messages: CloudAgentChatMessage[] = [];
+    applyAgentEvent(event("run_status", { status: "failed", cleanupPending: false, failureMessage: "执行规则已更新，请在当前对话发送新消息", approval }),
+        (update) => { messages = typeof update === "function" ? update(messages) : update; },
+        (update) => { run = typeof update === "function" ? update(run) : update; },
+        (update) => { pending = typeof update === "function" ? update(pending) : update; },
+    );
+    expect(pending).toBeNull();
+    expect(run?.id).toBe("ag-test-run");
+    expect(run?.status).toBe("failed");
+    expect(run?.cleanupPending).toBe(false);
+    expect(run?.approval).toBeUndefined();
+    expect(messages[0].text).toContain("在当前对话发送新消息");
+});
 
 function reduceEvents(events: AgentEvent[], initial: CloudAgentChatMessage[] = []) {
     let messages = initial;

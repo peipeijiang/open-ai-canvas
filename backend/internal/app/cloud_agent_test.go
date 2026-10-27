@@ -274,7 +274,7 @@ func TestCloudAgentActiveRunWithOlderCapabilityIsTerminatedWithoutResume(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if execution.Status != "failed" || !strings.Contains(execution.FailureMessage, "旧版执行合同") {
+	if execution.Status != "failed" || execution.FailureMessage != cloudAgentContractChangedMessage {
 		t.Fatalf("stale active contract was resumed or failed opaquely: status=%s message=%q", execution.Status, execution.FailureMessage)
 	}
 }

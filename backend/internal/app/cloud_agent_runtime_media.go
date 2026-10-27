@@ -421,6 +421,13 @@ func (s *Service) DecideCloudAgentApproval(userID, id, approvalID, decision, rea
 	}
 	state, err := cloudAgentDecodeForExecution(run)
 	if err != nil {
+		var conflict *AppError
+		if run.Status == "waiting_approval" && errors.As(err, &conflict) && conflict.Reason == cloudAgentContractChangedReason {
+			if stopErr := s.terminateCloudAgent(run, conflict.Message); stopErr != nil {
+				return stopErr
+			}
+			s.wakeCloudAgentScheduler()
+		}
 		return err
 	}
 	if previous, ok := state.Decisions[approvalID]; ok {

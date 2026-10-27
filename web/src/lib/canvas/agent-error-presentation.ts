@@ -1,6 +1,11 @@
 import { ApiError } from "@/services/api/request";
 import { AgentStreamError } from "@/services/api/agent";
 
+export function agentApprovalErrorTitle(cause: unknown) {
+    if (cause instanceof ApiError && cause.reason === "agent_runtime_contract_changed") return "旧审批已失效，请在当前对话发送新消息";
+    return "审批未确认，请重试";
+}
+
 export function agentErrorPresentation(cause: unknown, fallback = "Agent 执行失败") {
     const text = typeof cause === "string" ? cause.trim() : cause instanceof Error ? cause.message : fallback;
     if ((cause instanceof ApiError || cause instanceof AgentStreamError) && cause.status === 404) {

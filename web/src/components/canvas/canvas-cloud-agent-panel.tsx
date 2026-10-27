@@ -11,7 +11,7 @@ import { nanoid } from "nanoid";
 
 import type { CanvasResourceReference } from "@/lib/canvas/canvas-resource-references";
 import { canvasThemes } from "@/lib/canvas-theme";
-import { agentSubmissionErrorTitle } from "@/lib/canvas/agent-error-presentation";
+import { agentApprovalErrorTitle, agentSubmissionErrorTitle } from "@/lib/canvas/agent-error-presentation";
 import { CanvasSyncPendingError, waitForCanvasSync } from "@/lib/canvas/sync-recovery";
 import {
     cancelAgentRun,
@@ -887,6 +887,7 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
             // asking the user to retry. The backend treats identical decisions idempotently.
             try {
                 const snapshot = await getAgentRun(runId, AbortSignal.timeout(5_000));
+                if (currentScope.current !== scope) return;
                 const decided = snapshot.run.events?.some(
                     (event) => event.type === "approval_decided" && event.payload.approvalId === approvalId && event.payload.decision === decision && (!mediaSettings || agentApprovalMatchesSettings(event.payload.arguments, mediaSettings)),
                 );
@@ -895,10 +896,18 @@ export const CanvasCloudAgentPanel = memo(function CanvasCloudAgentPanel() {
                     setRun(snapshot.run);
                     return;
                 }
+                // A rejected stale decision is conclusive once the durable run
+                // has ended. Keep its identity/history as the next turn's parent.
+                if (["completed", "failed", "cancelled", "rejected"].includes(snapshot.run.status)) {
+                    setApproval((current) => (current?.approvalId === approvalId ? null : current));
+                    setRun((current) => current?.id === runId ? snapshot.run : current);
+                    setConnectionEpoch((value) => value + 1);
+                }
             } catch {
                 // Preserve the pending approval so the same decision can be retried.
             }
-            setMessages((current) => appendAgentError(current, `approval-error-${Date.now()}`, cause, "审批未确认，请重试"));
+            if (currentScope.current !== scope) return;
+            setMessages((current) => appendAgentError(current, `approval-error-${Date.now()}`, cause, agentApprovalErrorTitle(cause)));
         } finally {
             if (approvalRequestRef.current === approvalId) approvalRequestRef.current = null;
             if (currentScope.current === scope) setApprovalSubmitting(false);

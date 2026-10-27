@@ -65,7 +65,7 @@ export function applyAgentEvent(
                       skills: payload.skills as AgentRun["skills"],
                       spentCredits: Number(payload.spentCredits || 0),
                       step: Number(payload.step || 0),
-                      approval: snapshotApproval,
+                      approval: terminal ? undefined : snapshotApproval,
                   }
                 : current,
         );
@@ -75,7 +75,7 @@ export function applyAgentEvent(
         if (nextStatus === "failed") {
             setMessages((current) => upsertRunFailure(current, event, String(payload.failureMessage || "")));
         }
-        if (snapshotApproval && !snapshotApproval.decision && snapshotApproval.approvalId) {
+        if (!terminal && snapshotApproval && !snapshotApproval.decision && snapshotApproval.approvalId) {
             setApproval((current) => ({ approvalId: snapshotApproval.approvalId, detail: snapshotApproval, reason: current?.approvalId === snapshotApproval.approvalId ? current.reason : snapshotApproval.reason || "" }));
         } else {
             setApproval(null);

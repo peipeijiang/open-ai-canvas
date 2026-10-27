@@ -101,13 +101,18 @@ func cloudAgentDecode(run *model.CloudAgentExecution) (cloudAgentRuntime, error)
 // model/tool execution. Historical reads intentionally use cloudAgentDecode:
 // a completed turn keeps its frozen policy and capability snapshot and remains
 // valid conversation context after the current runtime contract advances.
+const cloudAgentContractChangedReason ErrorReason = "agent_runtime_contract_changed"
+const cloudAgentContractChangedMessage = "执行规则已更新，旧审批已失效。请在当前对话发送新消息继续，历史和草稿会保留；旧审批不会自动提交生成任务。"
+
 func cloudAgentDecodeForExecution(run *model.CloudAgentExecution) (cloudAgentRuntime, error) {
 	state, err := cloudAgentDecode(run)
 	if err != nil {
 		return state, WrapAppError(409, "Agent 运行记录无法安全恢复；请新建一轮消息", err)
 	}
 	if err := validateCloudAgentPolicySnapshot(state.Policy); err != nil {
-		return state, WrapAppError(409, "Agent 运行使用旧版执行合同，无法继续原运行；请新建一轮消息", err)
+		conflict := WrapAppError(409, cloudAgentContractChangedMessage, err)
+		conflict.Reason = cloudAgentContractChangedReason
+		return state, conflict
 	}
 	return state, nil
 }

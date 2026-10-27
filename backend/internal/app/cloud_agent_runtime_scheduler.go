@@ -199,7 +199,7 @@ func (s *Service) advanceCloudAgent(run *model.CloudAgentExecution) (err error) 
 	if run.CleanupPending {
 		return s.finishCloudAgentCleanup(context.Background(), run)
 	}
-	if run.Status != "running" && run.Status != "queued" {
+	if run.Status != "running" && run.Status != "queued" && run.Status != "waiting_approval" {
 		return nil
 	}
 	state, err := cloudAgentDecodeForExecution(run)
@@ -209,6 +209,11 @@ func (s *Service) advanceCloudAgent(run *model.CloudAgentExecution) (err error) 
 			return s.terminateCloudAgent(run, appErr.Message)
 		}
 		return s.terminateCloudAgent(run, "Agent 运行状态损坏，本轮已停止")
+	}
+	// Waiting approvals still need contract validation after an upgrade, but
+	// must never advance a model or tool until the user decides them.
+	if run.Status == "waiting_approval" {
+		return nil
 	}
 	// 单步边界每次推进都重新解析：管理员改配置后，正在跑的这一轮下一步就用新值。
 	state.StepLimits, err = s.cloudAgentStepLimits()
