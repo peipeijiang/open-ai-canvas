@@ -112,11 +112,12 @@ export function storyboardRowsOutputContract(requirement: string) {
         `- 顶层固定为 {"title": string, "rows": object[]}，rows 至少 1 项。${requirement}`,
         "- rows 每项对应一个镜头，按剧情顺序排列；字段缺失时填空字符串或空数组，不要省略字段：",
         "  shotNumber（整数，从 1 递增）、durationSeconds（整数，1-60）、plotDescription（本镜可见的剧情与关键动作）、",
-        "  dialogue（本镜实际念出的台词或简短旁白，超长必须拆镜）、characters（本镜出现的角色名数组）、",
+        "  dialogue（本镜实际念出的台词或简短旁白，超长必须拆镜）、characters（本镜出现的角色引用数组；能匹配资产目录时填写 characterAssetId 和 characterVersionId）、",
         "  narrativeIntent、viewerPOV、performanceBlocking、shotSize（景别）、emotion、lightingAndAtmosphere、",
         "  audioEffects、camera、motion、timeBeats、imageGenerationPrompt（首帧画面提示词）、",
         "  videoMotionPrompt（运镜与结尾状态）、continuityOut、negativePrompt、",
-        "  mustHave（数组，最多 3 项）、optionalDetails（数组）。",
+        "  mustHave（数组，最多 3 项）、optionalDetails（数组）、assetBindings（本镜实际使用的资产绑定数组）。",
+        "- assetBindings 每项固定为 {nodeId, role, priority}：nodeId 必须逐字匹配输入资产目录中的 id；role 只能是 character、environment、wardrobe、prop、weapon、style、motion、audio；priority 为 0-100 的整数。只绑定本镜真正出现或作为视觉参考使用的资产，不要把整套资产目录全部绑定。",
         "- 镜头数量以完整覆盖剧情因果、人物关系和关键台词为准，不要为压缩数量删减关键情节。",
     ].join("\n");
 }

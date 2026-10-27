@@ -91,7 +91,12 @@ export async function generateChapterStoryboard(input: ChapterStoryboardGenerati
         selectedSkillIds: input.selectedSkillIds,
     });
     // 技能上下文只描述工作流，不会约束输出结构；必须显式带上输出契约，否则模型返回 Markdown 表格。
-    const prompt = withStoryboardOutputContract(skillExecution.prompt);
+    // 资产目录原本只放在 input JSON 中，文本模型不会稳定地把它当作可引用上下文；
+    // 将精简目录显式写进 prompt，模型才能返回可落库的 assetBindings。
+    const prompt = withStoryboardOutputContract([
+        skillExecution.prompt,
+        storyboardAssetCatalogPrompt(input.assets),
+    ].join("\n\n"));
     const task = await createGenerationTask({
         projectId: input.projectId,
         type: "canvas_text",
@@ -120,6 +125,22 @@ export async function generateChapterStoryboard(input: ChapterStoryboardGenerati
     options?.onTaskUpdate?.(task);
     const completed = await waitForGenerationTask(task.id, { initialTask: task, useTextEvents: true, onTaskUpdate: options?.onTaskUpdate });
     return { ...storyboardRowsFromTask(completed), skillCount: skillExecution.selectedSkills.length };
+}
+
+function storyboardAssetCatalogPrompt(assets: ChapterStoryboardAsset[]) {
+    if (!assets.length) {
+        return "【本章资产目录】\n当前没有已确认且可绑定版本的项目资产；assetBindings 必须返回空数组，不能编造 nodeId。";
+    }
+    const rows = assets.map((asset) => {
+        const category = asset.category || asset.type;
+        const prompt = asset.prompt.replace(/\s+/g, " ").trim().slice(0, 240);
+        return `- id=${asset.id} | title=${asset.title} | category=${category} | type=${asset.type}${prompt ? ` | description=${prompt}` : ""}`;
+    });
+    return [
+        "【本章资产目录】",
+        "以下 id 是可直接写入 assetBindings[].nodeId 的精确值；不要改写、翻译或用资产名称代替 id。每镜只绑定实际使用的角色、场景、道具、服装或风格资产。",
+        ...rows,
+    ].join("\n");
 }
 
 async function runProjectTextTask(input: ChapterAnalysisInput, operation: string, promptTemplateVariables: Record<string, string>, options?: ChapterTaskOptions) {
