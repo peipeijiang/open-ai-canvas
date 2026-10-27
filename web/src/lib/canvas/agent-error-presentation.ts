@@ -1,8 +1,11 @@
 import { ApiError } from "@/services/api/request";
 import { AgentStreamError } from "@/services/api/agent";
 
+const contractChangedTitle = "旧审批已失效，请在当前对话发送新消息";
+const contractChangedGuidance = "历史记录和草稿会保留。请在当前对话输入新消息继续，旧审批不会自动提交生成任务。";
+
 export function agentApprovalErrorTitle(cause: unknown) {
-    if (cause instanceof ApiError && cause.reason === "agent_runtime_contract_changed") return "旧审批已失效，请在当前对话发送新消息";
+    if (cause instanceof ApiError && cause.reason === "agent_runtime_contract_changed") return contractChangedTitle;
     return "审批未确认，请重试";
 }
 
@@ -26,10 +29,15 @@ export function agentErrorPresentation(cause: unknown, fallback = "Agent 执行�
 }
 
 export function agentErrorContent(text: string, title: string) {
+    // Old conversations persisted only public copy. Migrate its presentation
+    // without inferring run status, permissions, or execution from that text.
+    if (text.trim() === "Agent 运行使用旧版执行合同，无法继续原运行；请新建一轮消息" || title === contractChangedTitle) {
+        return { title: contractChangedTitle, description: contractChangedGuidance, diagnosticId: undefined, canRetry: false };
+    }
     // 只拆分服务端公开提示中的诊断尾注，不据此推断错误类型或改变业务语义。
     const diagnostic = text.trim().match(/^([\s\S]*?)；如反复出现，请把诊断号\s+([a-zA-Z0-9:_-]+)\s+反馈给管理员[。.]?$/);
     const description = (diagnostic?.[1] ?? text).trim();
-    return { description: description === title.trim() ? "" : description, diagnosticId: diagnostic?.[2] };
+    return { title, description: description === title.trim() ? "" : description, diagnosticId: diagnostic?.[2], canRetry: true };
 }
 
 export function agentSubmissionErrorTitle(cause: unknown, accepted: boolean, requestSent = true) {

@@ -5,6 +5,16 @@ import { canvasThemes } from "@/lib/canvas-theme";
 
 const error: CloudAgentChatMessage = { id: "error", role: "error", title: "Agent 执行失败", text: "Agent 执行失败" };
 
+test("historical contract errors show same-conversation guidance and no obsolete retry button", () => {
+    const item = { ...error, title: "审批未确认，请重试", text: "Agent 运行使用旧版执行合同，无法继续原运行；请新建一轮消息" };
+    const html = renderToStaticMarkup(<AgentChatMessage item={item} theme={canvasThemes.light} onRetry={() => {}} />);
+    expect(html).toContain("旧审批已失效，请在当前对话发送新消息");
+    expect(html).toContain("历史记录和草稿会保留");
+    expect(html).not.toContain("审批未确认，请重试");
+    expect(html).not.toContain("重试本轮");
+    expect(item.title).toBe("审批未确认，请重试");
+});
+
 test("generic failure renders its title only once in both canvas themes", () => {
     for (const theme of [canvasThemes.light, canvasThemes.dark]) {
         const html = renderToStaticMarkup(<AgentChatMessage item={error} theme={theme} />);

@@ -466,8 +466,7 @@ export function AgentChatMessage({
         );
     }
     if (item.role === "error") {
-        const title = item.title || (errorTone === "warning" ? "Agent 正在重试" : "Agent 暂时无法继续");
-        const { description, diagnosticId } = agentErrorContent(item.text, title);
+        const { title, description, diagnosticId, canRetry } = agentErrorContent(item.text, item.title || (errorTone === "warning" ? "Agent 正在重试" : "Agent 暂时无法继续"));
         return (
             <div className={`agent-status-message agent-status-message--${errorTone} agent-error-message`}>
                 <span className="agent-error-icon" aria-hidden="true">
@@ -491,7 +490,7 @@ export function AgentChatMessage({
                             </div>
                         </details>
                     ) : null}
-                    {onRetry ? (
+                    {onRetry && canRetry ? (
                         <Button type="text" size="small" className="agent-error-retry" icon={retrying ? <LoaderCircle className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />} disabled={retrying} onClick={onRetry}>
                             {retrying ? "重试中" : "重试本轮"}
                         </Button>
