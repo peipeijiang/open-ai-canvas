@@ -15,6 +15,7 @@ import type { TimelineProject } from "@/types/timeline";
 import { useSyncProgressStore, type SyncProjectProgress } from "@/stores/use-sync-progress-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { recordDiagnosticEvent } from "@/services/diagnostics/client-diagnostics";
+import { requestCrossTabStorageLock } from "@/services/cross-tab-storage-lock";
 
 export type CanvasProject = {
     id: string;
@@ -221,10 +222,6 @@ type CanvasGenerationPersistenceAttempt = {
 };
 const pendingCanvasGenerationAttempts = new Map<string, Map<string, CanvasGenerationPersistenceAttempt>>();
 
-type AsyncCanvasStorageLock = {
-    request<T>(name: string, callback: () => Promise<T>): Promise<T>;
-};
-
 type CanvasStorageLockOptions = {
     requireCrossRealmLock?: boolean;
 };
@@ -233,13 +230,8 @@ const CANVAS_STORAGE_LOCK_PREFIX = "yingce:canvas-generation-storage-lock:";
 const canvasStorageTails = new Map<string, Promise<void>>();
 
 function runWithBrowserCanvasStorageLock<T>(scope: string, operation: () => Promise<T>, options: CanvasStorageLockOptions) {
-    const locks = typeof window !== "undefined" && typeof navigator !== "undefined" ? (navigator.locks as AsyncCanvasStorageLock | undefined) : undefined;
     const lockName = `${CANVAS_STORAGE_LOCK_PREFIX}${scope}`;
-    if (locks) return locks.request(lockName, operation);
-    if (options.requireCrossRealmLock && typeof window !== "undefined" && typeof document !== "undefined") {
-        throw new Error("当前浏览器不支持跨标签存储锁，已停止画布生成持久化");
-    }
-    return operation();
+    return requestCrossTabStorageLock(lockName, operation, Boolean(options.requireCrossRealmLock));
 }
 
 /**
