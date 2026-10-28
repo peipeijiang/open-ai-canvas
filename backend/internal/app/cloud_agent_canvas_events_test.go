@@ -315,7 +315,7 @@ func TestCloudAgentMediaPolicyAllowsDefaultsWithoutBypassingApproval(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, text := range []string{"安全默认", "不要求四项逐个确认", "一次性询问", "界面独立审批", "不得自动重提"} {
+	for _, text := range []string{"安全默认", "不要求四项逐个确认", "一次性询问", "`request_approval` 模式会进入界面审批", "`auto` 模式在服务端", "不得自动重提"} {
 		if !strings.Contains(system.Text, text) {
 			t.Fatalf("media policy lost %q", text)
 		}

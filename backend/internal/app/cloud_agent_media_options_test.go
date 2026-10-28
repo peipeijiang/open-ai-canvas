@@ -38,7 +38,7 @@ func TestCloudAgentImageIgnoresUndeclaredModelQualityBeforeApproval(t *testing.T
 	a.Mode, a.ChannelModelKey, a.Duration, a.VideoGenerateAudio = "image", "nano-banana-pro", 0, nil
 	a.Size, a.Quality, a.NodeID = "16:9", "high", "image-shot-1"
 	a.ReferenceNodeIDs = []string{"cat"}
-	run, _ := agentMediaRun(t, s, a, "auto")
+	run, _ := agentMediaRun(t, s, a, "request_approval")
 	_, state := agentInterjectionState(t, s, run.ID)
 	request, _, err := s.prepareCloudAgentMedia(run, &state, agentMediaCall(a))
 	if err != nil {

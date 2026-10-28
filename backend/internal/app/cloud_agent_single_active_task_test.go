@@ -14,7 +14,7 @@ import (
 // 修复后模型步骤必须先等媒体结果回写、释放 MediaTaskID，再入队。
 func TestCloudAgentModelStepWaitsForPendingMediaTask(t *testing.T) {
 	s, db, a := agentMediaFixture(t)
-	run, state := agentMediaRun(t, s, a, "auto")
+	run, state := agentMediaRun(t, s, a, "request_approval")
 	if err := s.advanceCloudAgentTool(run, &state); err != nil {
 		t.Fatal(err)
 	}
