@@ -188,6 +188,7 @@ status 取值：queued / running / succeeded / failed / cancelled。
         "create": {
           "method": "POST",
           "path": "/api/minimax/v2/video_generation",
+          "originPath": true,
           "contentType": "application/json",
           "body": {
             "model": {
@@ -391,7 +392,8 @@ status 取值：queued / running / succeeded / failed / cancelled。
         },
         "poll": {
           "method": "GET",
-          "path": "/api/minimax/v2/query/video_generation/{{taskId}}"
+          "path": "/api/minimax/v2/query/video_generation/{{taskId}}",
+          "originPath": true
         },
         "response": {
           "taskId": {
