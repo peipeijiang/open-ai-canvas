@@ -62,6 +62,7 @@ import {
     createProjectUnit,
     deleteProjectUnit,
     importProjectUnits,
+    listProjectAssetsPage,
     replaceProjectUnitShots,
     reorderProjectUnits,
     updateProjectUnit,
@@ -72,7 +73,7 @@ import { useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { listGenerationTasks, queryGenerationTask, type GenerationTask } from "@/services/api/task-center";
 
 import { formatCount, formatTime, statusLabel, type ProjectDetailViewProps } from "./shared";
-import { chapterStoryboardAssets, chapterStoryboardCharacters, chapterStoryboardReplaceImpact, storyboardRowsToProjectShots } from "./chapter-storyboard-production";
+import { chapterStoryboardAssets, chapterStoryboardCharacters, chapterStoryboardReplaceImpact, loadAllProjectAssets, storyboardRowsToProjectShots } from "./chapter-storyboard-production";
 import { chapterAssetsFromGenerationTask, chapterStoryboardFromGenerationTask, chapterTaskIdentity, extractChapterAssets, generateChapterStoryboard } from "./project-chapter-ai";
 
 const CHAPTER_ROW_HEIGHT = 62;
@@ -363,8 +364,13 @@ export default function ProjectChaptersView({ detail, refreshProject }: ProjectD
         refreshProject();
         return created.candidates.length;
     };
-    const storeGeneratedStoryboard = async (unitId: string, rows: ReturnType<typeof chapterStoryboardFromGenerationTask>["rows"]) => {
-        const shots = storyboardRowsToProjectShots(rows, detail);
+    // 每次都重新读取完整项目资产，避免使用章节工作区里不完整或已过期的资产列表。
+    const loadStoryboardDetail = async (): Promise<ProjectDetail> => {
+        const assets = await loadAllProjectAssets((page) => listProjectAssetsPage(detail.project.id, { page, pageSize: 100 }));
+        return { ...detail, assets };
+    };
+    const storeGeneratedStoryboard = async (unitId: string, rows: ReturnType<typeof chapterStoryboardFromGenerationTask>["rows"], storyboardDetail?: ProjectDetail) => {
+        const shots = storyboardRowsToProjectShots(rows, storyboardDetail || await loadStoryboardDetail());
         await replaceProjectUnitShots(detail.project.id, unitId, shots, detail.shots.filter((shot) => shot.unitId === unitId).map((shot) => shot.id));
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["project", detail.project.id] }),
@@ -415,6 +421,7 @@ export default function ProjectChaptersView({ detail, refreshProject }: ProjectD
         beginChapterOperation(unit.id, "storyboard");
         message.info("分镜生成任务已开始，可继续编辑或切换章节");
         try {
+            const storyboardDetail = await loadStoryboardDetail();
             const result = await generateChapterStoryboard({
                 projectId: detail.project.id,
                 chapterId: unit.id,
@@ -426,13 +433,13 @@ export default function ProjectChaptersView({ detail, refreshProject }: ProjectD
                     prompt: projectStyle.prompt,
                     profileJson: detail.project.styleProfileJson,
                 },
-                characters: chapterStoryboardCharacters(detail, unit.id),
-                assets: chapterStoryboardAssets(detail),
+                characters: chapterStoryboardCharacters(storyboardDetail, unit.id),
+                assets: chapterStoryboardAssets(storyboardDetail),
                 config,
                 skills: availableSkills,
                 selectedSkillIds,
             }, { onTaskUpdate: (task) => updateChapterOperation(unit.id, "storyboard", task) });
-            const shotCount = await storeGeneratedStoryboard(unit.id, result.rows);
+            const shotCount = await storeGeneratedStoryboard(unit.id, result.rows, storyboardDetail);
             message.success(result.skillCount ? `已生成 ${shotCount} 个分镜，并应用 ${result.skillCount} 个技能` : `已生成 ${shotCount} 个分镜`);
             navigate(`/projects/${detail.project.id}/workflow/${unit.id}/storyboard`);
         } catch (error) {

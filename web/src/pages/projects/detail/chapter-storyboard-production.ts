@@ -1,6 +1,6 @@
 import type { StoryboardRow } from "@/types/canvas";
 import { formatShotOrdinal } from "@/lib/shot-label";
-import type { ProjectDetail, ShotRevisionInput } from "@/services/api/projects";
+import type { ProjectAsset, ProjectDetail, ShotRevisionInput } from "@/services/api/projects";
 import { ensureShotAssetMentionPrompt } from "./workflow-shot-references";
 
 export type ChapterStoryboardAsset = {
@@ -36,6 +36,20 @@ export type ChapterStoryboardReplaceImpact = {
     artifactCount: number;
     candidateCount: number;
 };
+
+type ProjectAssetPageLoader = (page: number) => Promise<{ assets: ProjectAsset[]; hasMore: boolean }>;
+
+// 章节工作区只携带本章镜头已引用的资产，还没绑定过的资产不在其中。
+// 分镜生成必须基于完整的项目资产，否则资产清单为空，模型只能返回空绑定。
+export async function loadAllProjectAssets(loadPage: ProjectAssetPageLoader, maxPages = 20): Promise<ProjectAsset[]> {
+    const assets: ProjectAsset[] = [];
+    for (let page = 1; page <= maxPages; page += 1) {
+        const result = await loadPage(page);
+        assets.push(...result.assets);
+        if (!result.hasMore) return assets;
+    }
+    throw new Error("项目资产过多，无法一次读取完整资产清单");
+}
 
 export function chapterStoryboardCharacters(detail: ProjectDetail, unitId?: string): ChapterStoryboardCharacter[] {
     const confirmed = detail.assets.flatMap((asset): ChapterStoryboardCharacter[] => {
@@ -142,6 +156,9 @@ function storyboardRowAssetIds(row: StoryboardRow) {
 function storyboardAssetType(mediaType: string, category: string): ChapterStoryboardAsset["type"] | null {
     if (category === "character") return "character";
     if (mediaType === "image" || mediaType === "video" || mediaType === "audio") return mediaType;
+    // 场景、道具等文字设定资产（mediaType 为 entity）尚未生成图片，也要进入分镜资产目录，
+    // 否则模型只能返回空绑定，镜头无法引用这些已确认的设定。
+    if (mediaType === "entity" && category) return "image";
     return null;
 }
 

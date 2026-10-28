@@ -2,7 +2,7 @@
   "apiVersion": "yingce.plugin/v2",
   "id": "updrama-audio",
   "name": "Updrama 音乐与配音",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "author": "Local deployment",
   "description": "按 updrama 文档适配 Suno v6 音乐与 GEM-2.5-TTS 配音的统一异步媒体 API。",
   "documentation": "协议来源：https://up.lk888.ai/apidoc。创建 POST /v1/media/generate；查询 GET /v1/media/status?task_id=。使用 state 判断状态。Suno 的 prompt 是风格，params.lyrics 是歌词；GEM 2.5 必填 model_version，默认 pro；voice_id 默认 Zephyr，支持角色绑定的预置音色，非声音克隆。仅声明式映射，凭据与下载由宿主处理。",
@@ -162,6 +162,21 @@
           }
         },
         "response": {
+          "taskIdPaths": [
+            "task_id",
+            "taskId",
+            "taskID",
+            "id",
+            "data.task_id",
+            "data.taskId",
+            "data.taskID",
+            "data.id",
+            "data.task.id",
+            "data.result.task_id",
+            "data.result.taskId",
+            "result.task_id",
+            "result.taskId"
+          ],
           "taskId": {
             "$coalesce": [
               {
@@ -258,6 +273,12 @@
                 "default": "pending"
               }
           },
+          "statusPaths": [
+            "state",
+            "data.state",
+            "status",
+            "data.status"
+          ],
           "message": {
             "$coalesce": [
               {
@@ -267,7 +288,16 @@
                 "$ref": "response.error"
               },
               {
+                "$ref": "response.error.message"
+              },
+              {
+                "$ref": "response.error.msg"
+              },
+              {
                 "$ref": "response.message"
+              },
+              {
+                "$ref": "response.msg"
               }
             ]
           },
@@ -284,13 +314,20 @@
               },
               {
                 "$ref": "response.data.audio_url"
+              },
+              {
+                "$ref": "response.result_urls"
+              },
+              {
+                "$ref": "response.data.result_urls"
               }
             ]
           },
           "resultKind": "audio",
           "resultEphemeral": true,
           "errorPaths": [
-            "error.code"
+            "error.code",
+            "error.type"
           ]
         }
       },
@@ -453,6 +490,21 @@
           }
         },
         "response": {
+          "taskIdPaths": [
+            "task_id",
+            "taskId",
+            "taskID",
+            "id",
+            "data.task_id",
+            "data.taskId",
+            "data.taskID",
+            "data.id",
+            "data.task.id",
+            "data.result.task_id",
+            "data.result.taskId",
+            "result.task_id",
+            "result.taskId"
+          ],
           "taskId": {
             "$coalesce": [
               {
@@ -549,6 +601,12 @@
                 "default": "pending"
               }
           },
+          "statusPaths": [
+            "state",
+            "data.state",
+            "status",
+            "data.status"
+          ],
           "message": {
             "$coalesce": [
               {
@@ -558,7 +616,16 @@
                 "$ref": "response.error"
               },
               {
+                "$ref": "response.error.message"
+              },
+              {
+                "$ref": "response.error.msg"
+              },
+              {
                 "$ref": "response.message"
+              },
+              {
+                "$ref": "response.msg"
               }
             ]
           },
@@ -575,13 +642,20 @@
               },
               {
                 "$ref": "response.data.audio_url"
+              },
+              {
+                "$ref": "response.result_urls"
+              },
+              {
+                "$ref": "response.data.result_urls"
               }
             ]
           },
           "resultKind": "audio",
           "resultEphemeral": true,
           "errorPaths": [
-            "error.code"
+            "error.code",
+            "error.type"
           ]
         }
       }

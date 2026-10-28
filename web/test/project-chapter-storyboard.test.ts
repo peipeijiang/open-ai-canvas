@@ -4,6 +4,7 @@ import {
     chapterStoryboardAssets,
     chapterStoryboardCharacters,
     chapterStoryboardReplaceImpact,
+    loadAllProjectAssets,
     storyboardRowsToProjectShots,
 } from "@/pages/projects/detail/chapter-storyboard-production";
 import type { ProjectDetail } from "@/services/api/projects";
@@ -46,6 +47,24 @@ describe("章节分镜写入分镜制作", () => {
             { id: "character-1", type: "character", characterVersionId: "character-version-1" },
             { id: "prop-1", type: "image", characterVersionId: undefined },
         ]);
+    });
+
+    test("文字设定的场景和道具也交给分镜任务，且仍需已确认版本", () => {
+        const detail = projectDetail();
+        detail.assets.push(
+            { id: "scene-1", title: "走廊", mediaType: "entity", category: "environment", status: "confirmed", primaryVersionId: "scene-version-1", versionCount: 1, usages: [], position: 3, updatedAt: "" },
+            { id: "entity-no-version", title: "无版本设定", mediaType: "entity", category: "prop", status: "confirmed", versionCount: 0, usages: [], position: 4, updatedAt: "" },
+        );
+
+        expect(chapterStoryboardAssets(detail).map((asset) => asset.id)).toEqual(["character-1", "prop-1", "scene-1"]);
+    });
+
+    test("读取完整项目资产时逐页合并，超过页数上限时报错而不是静默截断", async () => {
+        const asset = (id: string) => ({ ...projectDetail().assets[1], id });
+        const pages = [[asset("a"), asset("b")], [asset("c")]];
+        const loaded = await loadAllProjectAssets(async (page) => ({ assets: pages[page - 1], hasMore: page < pages.length }));
+        expect(loaded.map((item) => item.id)).toEqual(["a", "b", "c"]);
+        await expect(loadAllProjectAssets(async () => ({ assets: [asset("x")], hasMore: true }), 3)).rejects.toThrow("项目资产过多");
     });
 
     test("替换确认统计该章会被删除的关联数据", () => {
