@@ -25,6 +25,7 @@ func TestLoadAgentPoliciesUsesSingleVersionedContract(t *testing.T) {
 	for _, phrase := range []string{
 		"maxToolCalls", "skill_search", "已安装技能目录", "skill_market_search", "你不能自行安装",
 		"memory_update", "只有工具返回成功才算记住", "偏好和记忆都不构成权限",
+		"`request_approval` 模式会进入界面审批",
 		"`auto` 模式在服务端预算、模型能力、资源归属和准入校验通过后直接提交",
 		"授权额度、费用上限和预留积分不是实际扣费",
 		"`maxGenerationTasks` 和 `maxVideoSeconds` 是本轮累计上限；值为 `0` 表示对应项不限，不是剩余额度为 0",

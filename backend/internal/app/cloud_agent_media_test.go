@@ -39,7 +39,7 @@ func agentMediaFixture(t *testing.T) (*Service, *gorm.DB, cloudAgentMediaArgs) {
 		t.Fatal(err)
 	}
 	audio := true
-	a := cloudAgentMediaArgs{Mode: "video", Prompt: "镜头1，参考图1是英雄，参考图2是叮当猫", ChannelID: "channel", ChannelModelKey: "seedance-test", Duration: 12, Size: "9:16", VideoGenerateAudio: &audio, SnapshotHash: creationHash(doc), NodeID: "video-shot-1", Title: "镜头1视频", SourceNodeID: "shot-1", ReferenceNodeIDs: []string{"hero", "cat"}}
+	a := cloudAgentMediaArgs{Mode: "video", Prompt: "镜头1，参考图1是英雄，参考图2是叮当猫", ChannelID: "channel", ChannelModelKey: "seedance-test", Duration: 12, Size: "9:16", VideoGenerateAudio: &audio, SnapshotHash: cloudAgentCanvasHash(doc), NodeID: "video-shot-1", Title: "镜头1视频", SourceNodeID: "shot-1", ReferenceNodeIDs: []string{"hero", "cat"}}
 	return s, db, a
 }
 
