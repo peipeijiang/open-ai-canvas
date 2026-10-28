@@ -20,7 +20,8 @@ const (
 	KindRead
 	// KindWrite 修改画布或结构化内容，但不提交收费任务。
 	KindWrite
-	// KindMedia 创建草稿并提交收费生成任务，总是走独立审批。
+	// KindMedia 创建草稿并提交收费生成任务；request_approval 模式会暂停审批，
+	// auto 模式沿用本轮预算直接提交。
 	KindMedia
 	// KindPrepare 生成临时资源或请求，不修改画布也不收费（如标注图、白模预览）。
 	KindPrepare
@@ -86,7 +87,7 @@ func (p Policy) ReadOnly() bool { return p.Kind == KindRead }
 func (p Policy) Media() bool { return p.Kind == KindMedia }
 
 func (p Policy) ApprovalRequired(permissionMode string) bool {
-	return p.Media() || (p.Write() && permissionMode == "request_approval")
+	return p.Write() && permissionMode == "request_approval"
 }
 
 // LessonEligible 表示该工具成功后可以作为沉淀经验的依据：只有真实改变画布或
