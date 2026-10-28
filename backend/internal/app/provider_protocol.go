@@ -141,14 +141,31 @@ func extractProviderTaskID(body []byte) (string, error) {
 	if json.Unmarshal(body, &payload) != nil {
 		return "", nil
 	}
-	id, err := firstJSONString(payload, "id", "task_id", "taskId", "request_id", "name")
+	// Updrama has returned more than one envelope over time (snake_case in the
+	// API docs, camelCase in some gateway deployments).  Keep extraction
+	// deliberately permissive here: this is only used after the manifest
+	// mapping failed, and prevents a valid paid task from being reported as
+	// "no task ID" merely because the gateway changed casing or nesting.
+	id, err := firstJSONString(payload, "id", "task_id", "taskId", "taskID", "request_id", "requestId", "name")
 	if id != "" {
 		return id, nil
 	}
 	if data, ok := payload["data"].(map[string]interface{}); ok {
-		nested, nestedErr := firstJSONString(data, "id", "task_id", "taskId", "request_id")
+		nested, nestedErr := firstJSONString(data, "id", "task_id", "taskId", "taskID", "request_id", "requestId")
 		if nested != "" {
 			return nested, nil
+		}
+		if task, ok := data["task"].(map[string]interface{}); ok {
+			nested, nestedErr = firstJSONString(task, "id", "task_id", "taskId", "taskID")
+			if nested != "" {
+				return nested, nil
+			}
+		}
+		if result, ok := data["result"].(map[string]interface{}); ok {
+			nested, nestedErr = firstJSONString(result, "id", "task_id", "taskId", "taskID")
+			if nested != "" {
+				return nested, nil
+			}
 		}
 		if nestedErr != nil {
 			return "", nestedErr
