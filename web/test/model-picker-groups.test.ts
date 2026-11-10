@@ -113,9 +113,9 @@ test("same-channel system variants do not borrow capabilities or reroute incompa
 test("distinct models in one system channel are grouped under the channel", () => {
     const config = fixture();
     const extra = systemChannelModelChannels([{ id: "volc", name: "火山引擎", displayName: "火山引擎", models: [
-        model("Seedance 2 Mini", 300000, "seedance-2-mini", "Seedance 2 Mini"),
-        model("Seedance 2.0 Fast", 300000, "seedance-2-fast", "Seedance 2.0 Fast"),
-        model("Seedance 2.0", 300000, "seedance-2", "Seedance 2.0"),
+        { ...model("Seedance 2 Mini", 300000, "seedance-2-mini", "Seedance 2 Mini"), channelLabel: "火山引擎" },
+        { ...model("Seedance 2.0 Fast", 300000, "seedance-2-fast", "Seedance 2.0 Fast"), channelLabel: "火山引擎" },
+        { ...model("Seedance 2.0", 300000, "seedance-2", "Seedance 2.0"), channelLabel: "火山引擎" },
     ] }]);
     const groups = groupModelsForPicker({ ...config, channels: extra }, selectableModelsByCapability({ ...config, channels: extra }, "video"));
     expect(groups).toHaveLength(1);

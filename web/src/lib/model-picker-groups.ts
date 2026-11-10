@@ -36,7 +36,7 @@ export function groupModelsForPicker(config: AiConfig, options: string[]): Model
             const key = JSON.stringify(["product-channel", channel.id]);
             groups.set(key, {
                 key,
-                label: channel.name?.trim() || modelChannelLabel(config, directModels[0]) || "系统模型",
+                label: modelChannelLabel(config, directModels[0]) || channel.name?.trim() || "系统模型",
                 icon: modelIcon(config, directModels[0]),
                 scope: "平台服务",
                 kind: "product",
