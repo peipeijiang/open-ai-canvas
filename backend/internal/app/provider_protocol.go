@@ -155,7 +155,9 @@ func runProtocolAdapterTaskWithPolicy(ctx context.Context, input canvasGeneratio
 		if err != nil {
 			return videoPollOutcome{}, err
 		}
-		if state.TaskID != "" {
+		// 轮询不应改写已提交任务 ID：部分上游的查询响应把 data 换成对象，
+		// 插件把它映射成 taskId 时会得到非 ID 文本，覆盖后会被误判为另一条任务。
+		if state.TaskID != "" && taskID == "" {
 			taskID = state.TaskID
 		}
 		switch state.Status {

@@ -96,6 +96,9 @@ func TestXMiniMaxH3PollAndParsing(t *testing.T) {
 	if done.Status != StatusSucceeded || done.Result == nil || len(done.Result.Videos) != 1 || done.Result.Videos[0].URL != "https://cdn.example.com/out.mp4" {
 		t.Fatalf("done = %#v", done)
 	}
+	if done.TaskID != "" && done.TaskID != "task-1" {
+		t.Fatalf("poll task id must not be inferred from the nested data object: %q", done.TaskID)
+	}
 
 	failed, err := adapter.ParsePoll(ctx, PollContext{TaskID: "task-2"}, []byte(`{"status":"failed","data":{"status":"failed","failReason":"engine switch failed"}}`))
 	if err != nil {

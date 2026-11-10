@@ -376,7 +376,20 @@ POST `http://152.136.42.128:8190/v1/video/getVideoStatus`
           "taskId": {
             "$coalesce": [
               {
-                "$ref": "response.data"
+                "$if": {
+                  "condition": {
+                    "$ne": [
+                      {
+                        "$ref": "response.data.status"
+                      },
+                      null
+                    ]
+                  },
+                  "then": "",
+                  "else": {
+                    "$ref": "response.data"
+                  }
+                }
               },
               {
                 "$ref": "response.id"

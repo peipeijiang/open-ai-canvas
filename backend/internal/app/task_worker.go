@@ -349,7 +349,13 @@ func (w *taskWorkerCoordinator) processClaimedTask(task *model.Task, globalSlot 
 		}
 		var detachedErr providerStatePendingError
 		if errors.As(err, &detachedErr) && detachedErr.Detached {
-			err = fmt.Errorf("上游任务等待超过 %d 小时仍未完成，已停止自动查询，请在渠道侧确认任务 %s 的状态。", int(detachedProviderTaskMaxAge.Hours()), detachedErr.TaskID)
+			if task.StartedAt != nil && time.Since(*task.StartedAt) >= detachedProviderTaskMaxAge {
+				err = fmt.Errorf("上游任务等待超过 %d 小时仍未完成，已停止自动查询，请在渠道侧确认任务 %s 的状态。", int(detachedProviderTaskMaxAge.Hours()), detachedErr.TaskID)
+			} else {
+				// 未到总等待上限却不能继续回查，通常意味着本地任务 ID 与上游不一致；
+				// 不要误报“48 小时超时”，提醒用户任务仍可能在渠道侧生成。
+				err = fmt.Errorf("上游任务仍在处理，但本地无法继续回查任务 %s；请到渠道侧确认是否已产出。", detachedErr.TaskID)
+			}
 		} else if isVideoTaskType(task.Type) && newAPIChannel2TaskSyncExpired(*task, err, time.Now()) {
 			err = errors.New("上游任务长时间未同步，已停止自动查询，请确认渠道任务状态后重试。")
 		}
