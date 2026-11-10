@@ -1,6 +1,7 @@
 import { createClientUUID } from "@/lib/client-id";
 import { localForageStorageForScope } from "@/lib/localforage-storage";
 import { getActiveUserScope } from "@/lib/user-scope";
+import { requestCrossTabStorageLock } from "@/services/cross-tab-storage-lock";
 import type { GenerationTaskEffectClaim, GenerationTaskEffectResult, GenerationTaskEffectStore } from "@/services/generation-task-materializer";
 
 type EffectRecord = {
@@ -54,7 +55,12 @@ function effectLock(requireCrossRealmLock: boolean): AsyncLock {
     const locks = typeof window !== "undefined" && typeof navigator !== "undefined" ? navigator.locks : undefined;
     if (locks) return locks;
     if (requireCrossRealmLock && typeof window !== "undefined" && typeof document !== "undefined") {
-        throw new Error("当前浏览器不支持跨页面生成副作用互斥");
+        // HTTP 非安全上下文没有 Web Locks，退回 IndexedDB 跨标签互斥。
+        return {
+            request<T>(name: string, callback: () => Promise<T>) {
+                return requestCrossTabStorageLock(name, callback);
+            },
+        };
     }
     return {
         async request<T>(name: string, callback: () => Promise<T>) {
