@@ -12,7 +12,7 @@ import (
 
 func TestCloudAgentMinimalMediaIntentMaterializesStableDraftBeforeApproval(t *testing.T) {
 	s, db, a := agentMediaFixture(t)
-	run, state := agentMediaRun(t, s, a, "auto")
+	run, state := agentMediaRun(t, s, a, "request_approval")
 	state.event(run.ID, "tool_completed", map[string]any{
 		"toolName": "model_list", "arguments": `{"mode":"video","referenceNodeIds":[]}`,
 		"result": map[string]any{"models": []map[string]any{{"capability": "video", "selection": map[string]any{"channelId": "channel", "channelModelKey": "seedance-test"}}}},
@@ -113,7 +113,7 @@ func TestCloudAgentDraftAcceptsScopedUserSpecificationChange(t *testing.T) {
 	}
 	a.SnapshotHash, a.Size = cloudAgentMediaContentHash(doc), "9:16"
 	a.ConfigurationChange = &cloudAgentMediaConfigurationChange{Fields: []string{"size"}, UserInstruction: "改成9:16"}
-	run, state := agentMediaRun(t, s, a, "auto")
+	run, state := agentMediaRun(t, s, a, "request_approval")
 	state.Canonical.Messages = []map[string]any{{"role": "user", "content": "这个草稿改成9:16，其他不变"}}
 	// Omitted model and title inherit the draft rather than forcing another read or model turn.
 	var fields map[string]any
@@ -167,7 +167,7 @@ func TestCloudAgentDraftAcceptsScopedUserSpecificationChange(t *testing.T) {
 func TestCloudAgentApprovalDefaultDurationCannotBypassBudget(t *testing.T) {
 	s, db, a := agentMediaFixture(t)
 	a.Duration = 1
-	run, state := agentMediaRun(t, s, a, "auto")
+	run, state := agentMediaRun(t, s, a, "request_approval")
 	state.Request.Budget.MaxVideoSeconds = 1
 	if err := s.repo.MutateCloudAgent("user", run.ID, run.Revision, func(current *model.CloudAgentExecution, _ *repository.Repository) error {
 		return cloudAgentSave(current, &state)
