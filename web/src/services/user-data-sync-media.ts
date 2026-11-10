@@ -3,6 +3,7 @@
 // 同一份内联数据按内容摘要去重上传；上传失败时整批同步失败并进入重试，不写入半成品。
 
 import { getResourceBlob, isResourceUrl, resourceFileUrl, resourceIdFromStorageKey, resourceStorageKey, uploadResourceFile } from "@/services/api/resources";
+import { sha256Bytes } from "@/lib/sha256";
 import { getImageBlob } from "@/services/image-storage";
 import { getMediaBlob } from "@/services/file-storage";
 import { rebaseCanvasBatchInputSignatures } from "@/lib/canvas/canvas-batch-input-signature";
@@ -147,8 +148,8 @@ export async function uploadInlineDataUrl(dataUrl: string, identity: string) {
 }
 
 export async function inlineMediaUploadIdentity(dataUrl: string) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(dataUrl));
-    return `inline:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    const digest = await sha256Bytes(new TextEncoder().encode(dataUrl));
+    return `inline:${Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
 export async function uploadLocalStorageKey(storageKey: string, payload: Record<string, unknown>) {

@@ -3,6 +3,7 @@ import { backendProviderConfig, logicalModelIDForConfig, runBackendGenerationTas
 import { configuredModelMatchesCapability, defaultConfig, normalizeModelOptionValue, normalizeRunningHubCapability, type AiConfig, type WorkflowFieldMapping } from "@/stores/use-config-store";
 import { resolveImageUrl, uploadImage } from "@/services/image-storage";
 import { resolveMediaUrl, resolveVideoMediaUrl } from "@/services/file-storage";
+import { sha256Hex } from "@/lib/sha256";
 import { resourceIdFromStorageKey } from "@/services/api/resources";
 import { NODE_DEFAULT_SIZE } from "@/constant/canvas";
 import { normalizeVideoDuration, normalizeVideoResolution } from "@/lib/video-generation-options";
@@ -141,18 +142,7 @@ export type GenerationRetryContext = {
 
 /** HTTP 非安全上下文没有 crypto.subtle，用确定性哈希生成幂等键。 */
 async function stableDigestHex(bytes: Uint8Array) {
-    const subtle = globalThis.crypto?.subtle;
-    if (subtle) {
-        const digest = new Uint8Array(await subtle.digest("SHA-256", bytes as BufferSource));
-        return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
-    }
-    let first = 0x811c9dc5;
-    let second = 0x811c9dc5 ^ 0x9e3779b9;
-    for (const byte of bytes) {
-        first = Math.imul(first ^ byte, 0x01000193) >>> 0;
-        second = Math.imul(second ^ byte, 0x85ebca6b) >>> 0;
-    }
-    return first.toString(16).padStart(8, "0") + second.toString(16).padStart(8, "0");
+    return sha256Hex(bytes);
 }
 
 export async function createGenerationRetryContext(retryOf: string, attemptGroupId = retryOf): Promise<GenerationRetryContext> {
