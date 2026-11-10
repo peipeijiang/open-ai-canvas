@@ -173,6 +173,7 @@ export const koKR: DeepStringRecord<typeof zhCN> = {
         submitInProgress: "이전 메시지를 아직 보내는 중입니다. 잠시 후 보내세요",
         configureModel: "먼저 설정에서 {{mode}} 모델을 구성하세요",
         durationUnsupported: "현재 모델은 선택한 영상 길이를 지원하지 않습니다. 다시 선택하세요",
+        referenceMediaRequired: "이 모델로 생성하려면 먼저 참조 이미지, 영상 또는 오디오를 추가하세요.",
         referencesAdjusting: "참고 내용을 현재 모델에 맞게 조정하는 중입니다. 잠시 후 다시 시도하세요",
         runtimeLoadFailed: "생성 런타임을 불러오지 못했습니다",
         skillContextFailed: "스킬 컨텍스트를 불러오지 못했습니다",

@@ -173,6 +173,7 @@ export const frFR: DeepStringRecord<typeof zhCN> = {
         submitInProgress: "Le message précédent est encore en cours d'envoi. Patientez un instant.",
         configureModel: "Configurez d'abord un modèle {{mode}} dans les paramètres",
         durationUnsupported: "Le modèle actuel ne prend pas en charge cette durée de vidéo. Choisissez-en une autre.",
+        referenceMediaRequired: "Ajoutez d'abord une image, une vidéo ou un audio de référence pour ce modèle.",
         referencesAdjusting: "Les références sont en cours d'ajustement pour le modèle actuel. Réessayez dans un instant.",
         runtimeLoadFailed: "Impossible de charger le moteur de génération",
         skillContextFailed: "Impossible de charger le contexte de la compétence",

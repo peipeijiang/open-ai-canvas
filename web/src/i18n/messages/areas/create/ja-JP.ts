@@ -173,6 +173,7 @@ export const jaJP: DeepStringRecord<typeof zhCN> = {
         submitInProgress: "前のメッセージを送信中です。少し待ってから送信してください",
         configureModel: "先に設定で{{mode}}モデルを構成してください",
         durationUnsupported: "現在のモデルは選択した動画の長さに対応していません。選び直してください",
+        referenceMediaRequired: "このモデルで生成する前に、参照画像・動画・音声を追加してください。",
         referencesAdjusting: "参照内容を現在のモデルに合わせて調整中です。しばらくしてから再試行してください",
         runtimeLoadFailed: "生成ランタイムを読み込めませんでした",
         skillContextFailed: "スキルのコンテキストを読み込めませんでした",

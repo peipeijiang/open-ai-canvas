@@ -173,6 +173,7 @@ export const deDE: DeepStringRecord<typeof zhCN> = {
         submitInProgress: "Die vorherige Nachricht wird noch gesendet. Bitte einen Moment warten.",
         configureModel: "Richte zuerst in den Einstellungen ein {{mode}}-Modell ein",
         durationUnsupported: "Das aktuelle Modell unterstützt diese Videolänge nicht. Bitte eine andere wählen.",
+        referenceMediaRequired: "Fügen Sie vor der Generierung mit diesem Modell ein Referenzbild, -video oder -audio hinzu.",
         referencesAdjusting: "Die Referenzen werden an das aktuelle Modell angepasst. Versuche es gleich noch einmal.",
         runtimeLoadFailed: "Generierungs-Laufzeit konnte nicht geladen werden",
         skillContextFailed: "Skill-Kontext konnte nicht geladen werden",

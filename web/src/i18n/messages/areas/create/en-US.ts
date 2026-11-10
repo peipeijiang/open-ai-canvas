@@ -173,6 +173,7 @@ export const enUS: DeepStringRecord<typeof zhCN> = {
         submitInProgress: "The previous message is still being sent. Wait a moment.",
         configureModel: "Set up a {{mode}} model in Settings first",
         durationUnsupported: "The current model doesn't support this video length. Choose another.",
+        referenceMediaRequired: "Add a reference image, video, or audio clip before generating with this model.",
         referencesAdjusting: "References are being adjusted for the current model. Try again shortly.",
         runtimeLoadFailed: "Couldn't load the generation runtime",
         skillContextFailed: "Couldn't load the skill context",

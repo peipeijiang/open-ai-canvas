@@ -149,7 +149,12 @@ export function modelCompatibilityError(config: AiConfig, model: string, require
         if (input.videoCount > profile.references.maxVideos) return `最多支持 ${profile.references.maxVideos} 个参考视频`;
         if (input.audioCount > profile.references.maxAudios) return `最多支持 ${profile.references.maxAudios} 个参考音频`;
         const operation = resolveVideoOperation(input, requirements.videoOperation);
-        if (operation !== "concat" && !profile.operations.includes(operation)) return `不支持${videoOperationLabel(operation)}`;
+        if (operation !== "concat" && !profile.operations.includes(operation)) {
+            // 仅声明参考模式的视频模型（如 X-MiniMaxH3 Ref）在创作页可以先选中再补素材：
+            // 图片和视频会作为参考素材提交，而不是被当作首帧的图生视频。
+            const referenceOnly = profile.operations.includes("reference_to_video") && (operation === "text_to_video" || operation === "image_to_video");
+            if (!referenceOnly) return `不支持${videoOperationLabel(operation)}`;
+        }
         return "";
     }
 

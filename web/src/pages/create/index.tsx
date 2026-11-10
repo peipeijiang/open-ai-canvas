@@ -859,6 +859,18 @@ export default function CreatePage() {
             releaseSubmitGate();
             return;
         }
+        if (mode === "video" && !videoProfile.operations.includes("text_to_video")) {
+            const hasReferenceMedia = attachments.some((attachment) => {
+                const kind = creationAttachmentKind(attachment);
+                return kind === "image" || kind === "video" || kind === "audio";
+            });
+            if (!hasReferenceMedia) {
+                toast.error(t("create.page.referenceMediaRequired"));
+                releaseRetryLock();
+                releaseSubmitGate();
+                return;
+            }
+        }
         const reconciledAttachments = mode === "video" && videoReferenceLimits ? reconcileCreationAttachmentLimits(attachments, mentionReferences, videoReferenceLimits) : reconcileCreationAttachmentLimit(attachments, mentionReferences, maxReferences);
         if (reconciledAttachments.attachments !== attachments) {
             toast.warning(t("create.page.referencesAdjusting"));

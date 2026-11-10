@@ -171,6 +171,7 @@ export const zhCN = {
         submitInProgress: "上一条还在提交中，稍等片刻再发送",
         configureModel: "请先在设置中配置{{mode}}模型",
         durationUnsupported: "当前模型不支持所选视频时长，请重新选择",
+        referenceMediaRequired: "当前模型需要先添加参考图、参考视频或参考音频",
         referencesAdjusting: "参考内容正在按当前模型能力调整，请稍后重试",
         runtimeLoadFailed: "生成运行时加载失败",
         skillContextFailed: "技能上下文加载失败",
