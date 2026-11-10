@@ -110,7 +110,7 @@ test("same-channel system variants do not borrow capabilities or reroute incompa
     expect(resolveCompatibleModel(config, "comfy::h3-multi", requirements)).toBe("comfy::h3-multi");
 });
 
-test("different display names in one channel create distinct first-level groups", () => {
+test("distinct models in one system channel are grouped under the channel", () => {
     const config = fixture();
     const extra = systemChannelModelChannels([{ id: "volc", name: "火山引擎", displayName: "火山引擎", models: [
         model("Seedance 2 Mini", 300000, "seedance-2-mini", "Seedance 2 Mini"),
@@ -118,9 +118,10 @@ test("different display names in one channel create distinct first-level groups"
         model("Seedance 2.0", 300000, "seedance-2", "Seedance 2.0"),
     ] }]);
     const groups = groupModelsForPicker({ ...config, channels: extra }, selectableModelsByCapability({ ...config, channels: extra }, "video"));
-    expect(groups).toHaveLength(3);
-    expect(groups.map((group) => group.label)).toEqual(["Seedance 2 Mini", "Seedance 2.0 Fast", "Seedance 2.0"]);
-    expect(groups.every((group) => group.kind === "product" && group.models.length === 1)).toBe(true);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe("火山引擎");
+    expect(groups[0].models).toHaveLength(3);
+    expect(groups[0].models.map((item) => item.label)).toEqual(["Seedance 2 Mini", "Seedance 2.0 Fast", "Seedance 2.0"]);
 });
 
 test("group metadata is stable across channel reorder and current selection", () => {

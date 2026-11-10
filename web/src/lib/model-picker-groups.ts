@@ -25,16 +25,38 @@ export function groupModelsForPicker(config: AiConfig, options: string[]): Model
     for (const channel of config.channels) {
         const models = options.filter((value) => resolveModelChannel(config, value).id === channel.id);
         const directModels = models.filter((value) => isDirectSystemModel(config, value));
-        for (const value of directModels) {
-            const cost = channel.modelCosts?.find((item) => item.model === modelOptionName(value));
-            const label = cost?.displayName?.trim() || "未分类";
-            const key = JSON.stringify(["product", label]);
-            let group = groups.get(key);
-            if (!group) {
-                group = { key, label, icon: modelIcon(config, value), scope: "平台服务", kind: "product", models: [] };
-                groups.set(key, group);
+        const directLabel = (value: string) => channel.modelCosts?.find((item) => item.model === modelOptionName(value))?.displayName?.trim() || "未分类";
+        const directLabelCounts = new Map<string, number>();
+        for (const value of directModels) directLabelCounts.set(directLabel(value), (directLabelCounts.get(directLabel(value)) || 0) + 1);
+        const channelVariants = directModels.length > 1 && directModels.every((value) => directLabelCounts.get(directLabel(value)) === 1);
+        if (channelVariants) {
+            // 同一系统渠道下彼此不重名的直连模型归为一组：左侧显示渠道名，右侧按模型区分，
+            // 如 X-MiniMaxH3 的 FL/Ref、Base/Turbo 四个模型共用一个渠道。
+            // 同名模型跨渠道时仍按展示名合并，保留不同渠道的价格对照。
+            const key = JSON.stringify(["product-channel", channel.id]);
+            groups.set(key, {
+                key,
+                label: channel.name?.trim() || modelChannelLabel(config, directModels[0]) || "系统模型",
+                icon: modelIcon(config, directModels[0]),
+                scope: "平台服务",
+                kind: "product",
+                models: directModels.map((value) => ({
+                    key: value,
+                    label: channel.modelCosts?.find((item) => item.model === modelOptionName(value))?.displayName?.trim() || modelOptionName(value),
+                    models: [value],
+                })),
+            });
+        } else {
+            for (const value of directModels) {
+                const label = directLabel(value);
+                const key = JSON.stringify(["product", label]);
+                let group = groups.get(key);
+                if (!group) {
+                    group = { key, label, icon: modelIcon(config, value), scope: "平台服务", kind: "product", models: [] };
+                    groups.set(key, group);
+                }
+                group.models.push({ key: value, label: modelChannelLabel(config, value), models: [value] });
             }
-            group.models.push({ key: value, label: modelChannelLabel(config, value), models: [value] });
         }
         const otherModels = models.filter((value) => !isDirectSystemModel(config, value));
         if (otherModels.length) {

@@ -221,7 +221,7 @@ export function ModelPicker({
                                         </span>
                                         <small className="canvas-model-picker-brand-meta">
                                             <span className="canvas-model-picker-brand-subtext">
-                                                {group.models.length} 个{group.kind === "product" ? "渠道" : "模型"}
+                                                {group.kind === "product" ? (group.models.length > 1 ? `${group.models.length} 个模型 · 1 个渠道` : "1 个渠道") : `${group.models.length} 个模型`}
                                                 {group.scope ? ` · ${group.scope}` : ""}
                                             </span>
                                             <ModelRecentHealthTrack availability={groupAvailability(config, group)} />
@@ -250,7 +250,7 @@ export function ModelPicker({
                                             </span>
                                             <small className="canvas-model-picker-brand-meta">
                                                 <span className="canvas-model-picker-brand-subtext">
-                                                    {group.models.length} 个{group.kind === "product" ? "渠道" : "模型"}
+                                                    {group.kind === "product" ? (group.models.length > 1 ? `${group.models.length} 个模型 · 1 个渠道` : "1 个渠道") : `${group.models.length} 个模型`}
                                                     {group.scope ? ` · ${group.scope}` : ""}
                                                 </span>
                                                 <ModelRecentHealthTrack availability={groupAvailability(config, group)} />
